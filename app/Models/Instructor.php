@@ -31,6 +31,7 @@ class Instructor extends Model
         'activity_types' => 'array',
         'certifications' => 'array',
         'availability' => 'array',
+        'metadata' => 'array',
         'can_accept_instant_bookings' => 'boolean',
         'is_active' => 'boolean',
     ];

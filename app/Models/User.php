@@ -146,5 +146,17 @@ class User extends Authenticatable
         $pivot = $this->organizations()->where('organization_id', $organization->id)->first()?->pivot;
         return $pivot->role ?? null;
     }
+
+    public function instructor(): HasOne
+    {
+        return $this->hasOne(Instructor::class);
+    }
+
+    public function getInstructorForOrganization(Organization $organization): ?Instructor
+    {
+        return Instructor::where('user_id', $this->id)
+            ->where('organization_id', $organization->id)
+            ->first();
+    }
 }
 

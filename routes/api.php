@@ -5,6 +5,9 @@ use App\Http\Controllers\Api\v1\AuthController;
 use App\Http\Controllers\Api\v1\ReservationController;
 use App\Http\Controllers\Api\v1\PaymentController;
 use App\Http\Controllers\Api\v1\BiplaceurController;
+use App\Http\Controllers\Api\v1\InstructorController;
+use App\Http\Controllers\Api\v1\ActivityController;
+use App\Http\Controllers\Api\v1\ActivitySessionController;
 use App\Http\Controllers\Api\v1\ClientController;
 use App\Http\Controllers\Api\v1\DashboardController;
 use App\Http\Controllers\Api\v1\OptionController;
@@ -56,40 +59,73 @@ Route::prefix('v1')->group(function () {
     // ==================== PAIEMENTS ====================
     Route::prefix('payments')->group(function () {
         Route::post('/intent', [PaymentController::class, 'createIntent']);
-        Route::post('/capture', [PaymentController::class, 'capture'])->middleware(['auth:sanctum', 'role:admin,biplaceur']);
+        Route::post('/capture', [PaymentController::class, 'capture'])->middleware(['auth:sanctum', 'role:admin,instructor,biplaceur']);
         Route::post('/refund', [PaymentController::class, 'refund'])->middleware(['auth:sanctum', 'role:admin']);
         
-        // Stripe Terminal & QR Code (Biplaceurs)
-        Route::middleware(['auth:sanctum', 'role:biplaceur'])->group(function () {
+        // Stripe Terminal & QR Code (Instructeurs)
+        Route::middleware(['auth:sanctum', 'role:instructor,biplaceur'])->group(function () {
             Route::post('/terminal/connection-token', [PaymentController::class, 'getTerminalConnectionToken']);
             Route::post('/terminal/payment-intent', [PaymentController::class, 'createTerminalPaymentIntent']);
             Route::post('/qr/create', [PaymentController::class, 'createQrCheckout']);
         });
     });
 
-    // ==================== BIPLACEURS ====================
-    Route::prefix('biplaceurs')->group(function () {
+    // ==================== INSTRUCTORS (Générique) ====================
+    Route::prefix('instructors')->group(function () {
         // Routes publiques (liste)
-        Route::get('/', [BiplaceurController::class, 'index']);
+        Route::get('/', [InstructorController::class, 'index']);
+        Route::get('/by-activity/{activity_type}', [InstructorController::class, 'byActivity']);
         
-        // Routes biplaceur authentifié
-        Route::middleware(['auth:sanctum', 'role:biplaceur'])->prefix('me')->group(function () {
-            Route::get('/flights', [BiplaceurController::class, 'myFlights']);
-            Route::get('/flights/today', [BiplaceurController::class, 'flightsToday']);
-            Route::get('/calendar', [BiplaceurController::class, 'calendar']);
-            Route::put('/availability', [BiplaceurController::class, 'updateAvailability']);
-            Route::post('/flights/{id}/mark-done', [BiplaceurController::class, 'markFlightDone']);
-            Route::post('/flights/{id}/reschedule', [BiplaceurController::class, 'rescheduleFlight']);
-            Route::get('/flights/{id}/quick-info', [BiplaceurController::class, 'quickInfo']);
+        // Routes instructeur authentifié
+        Route::middleware(['auth:sanctum', 'role:instructor,biplaceur'])->prefix('me')->group(function () {
+            Route::get('/sessions', [InstructorController::class, 'mySessions']);
+            Route::get('/sessions/today', [InstructorController::class, 'sessionsToday']);
+            Route::get('/calendar', [InstructorController::class, 'calendar']);
+            Route::put('/availability', [InstructorController::class, 'updateAvailability']);
+            Route::post('/sessions/{id}/mark-done', [InstructorController::class, 'markSessionDone']);
+            Route::post('/sessions/{id}/reschedule', [InstructorController::class, 'rescheduleSession']);
+            Route::get('/sessions/{id}/quick-info', [InstructorController::class, 'quickInfo']);
         });
 
         // Routes admin
         Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-            Route::get('/{id}', [BiplaceurController::class, 'show']);
-            Route::get('/{id}/calendar', [BiplaceurController::class, 'calendar']); // Calendrier biplaceur (admin)
-            Route::post('/', [BiplaceurController::class, 'store']);
-            Route::put('/{id}', [BiplaceurController::class, 'update']);
-            Route::delete('/{id}', [BiplaceurController::class, 'destroy']);
+            Route::get('/{id}', [InstructorController::class, 'show']);
+            Route::get('/{id}/calendar', [InstructorController::class, 'calendar']);
+            Route::post('/', [InstructorController::class, 'store']);
+            Route::put('/{id}', [InstructorController::class, 'update']);
+            Route::delete('/{id}', [InstructorController::class, 'destroy']);
+        });
+    });
+
+    // ==================== ACTIVITIES (Générique) ====================
+    Route::prefix('activities')->group(function () {
+        // Routes publiques
+        Route::get('/', [ActivityController::class, 'index']);
+        Route::get('/by-type/{type}', [ActivityController::class, 'byType']);
+        Route::get('/{id}', [ActivityController::class, 'show']);
+        Route::get('/{id}/sessions', [ActivityController::class, 'sessions']);
+        Route::get('/{id}/availability', [ActivityController::class, 'availability']);
+
+        // Routes admin
+        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+            Route::post('/', [ActivityController::class, 'store']);
+            Route::put('/{id}', [ActivityController::class, 'update']);
+            Route::delete('/{id}', [ActivityController::class, 'destroy']);
+        });
+    });
+
+    // ==================== ACTIVITY SESSIONS (Générique) ====================
+    Route::prefix('activity-sessions')->group(function () {
+        // Routes publiques
+        Route::get('/', [ActivitySessionController::class, 'index']);
+        Route::get('/by-activity/{activity_id}', [ActivitySessionController::class, 'byActivity']);
+        Route::get('/{id}', [ActivitySessionController::class, 'show']);
+
+        // Routes admin
+        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+            Route::post('/', [ActivitySessionController::class, 'store']);
+            Route::put('/{id}', [ActivitySessionController::class, 'update']);
+            Route::delete('/{id}', [ActivitySessionController::class, 'destroy']);
         });
     });
 
@@ -165,16 +201,18 @@ Route::prefix('v1')->group(function () {
         Route::get('/stats', [DashboardController::class, 'stats']); // Alias pour summary
         Route::get('/revenue', [DashboardController::class, 'revenue']);
         Route::get('/flights', [DashboardController::class, 'flightStats']);
-        Route::get('/top-biplaceurs', [DashboardController::class, 'topBiplaceurs']);
+        Route::get('/top-instructors', [DashboardController::class, 'topInstructors']);
+        Route::get('/top-biplaceurs', [DashboardController::class, 'topBiplaceurs']); // Alias pour rétrocompatibilité
     });
     
-    // ==================== ADMIN - BIPLACEURS ====================
-    Route::prefix('admin/biplaceurs')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
-        Route::get('/{id}', [BiplaceurController::class, 'show']);
-        Route::get('/{id}/calendar', [BiplaceurController::class, 'calendar']); // Calendrier biplaceur (admin)
-        Route::post('/', [BiplaceurController::class, 'store']);
-        Route::put('/{id}', [BiplaceurController::class, 'update']);
-        Route::delete('/{id}', [BiplaceurController::class, 'destroy']);
+    // ==================== ADMIN - INSTRUCTORS (Générique) ====================
+    Route::prefix('admin/instructors')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::get('/', [InstructorController::class, 'index']);
+        Route::get('/{id}', [InstructorController::class, 'show']);
+        Route::get('/{id}/calendar', [InstructorController::class, 'calendar']);
+        Route::post('/', [InstructorController::class, 'store']);
+        Route::put('/{id}', [InstructorController::class, 'update']);
+        Route::delete('/{id}', [InstructorController::class, 'destroy']);
     });
 
     // ==================== ADMIN - RÉSERVATIONS ====================
