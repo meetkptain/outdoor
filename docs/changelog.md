@@ -2,6 +2,49 @@
 
 ## [1.5.0] – 2025-11-05 (En cours)
 
+### ✅ **Phase 4 - Refactorisation Services Spécifiques** (TERMINÉE)
+
+**Statut :** ✅ Terminée — 3 services refactorisés, 13 tests passent, 22 assertions
+
+#### ✨ Généralisation des services spécifiques
+
+* **StripeTerminalService refactorisé** (`app/Services/StripeTerminalService.php`) :
+  * ✅ `Biplaceur` remplacé par `Instructor`
+  * ✅ `getConnectionToken()` utilise `instructor_id` au lieu de `biplaceur_id`
+  * ✅ `can_tap_to_pay` récupéré depuis `Instructor->metadata`
+  * ✅ `stripe_terminal_location_id` récupéré depuis `Instructor->metadata`
+  * ✅ Toutes les méthodes utilisent `getStripeClient()` pour cohérence
+
+* **VehicleService refactorisé** (`app/Services/VehicleService.php`) :
+  * ✅ `biplaceur_id` remplacé par `instructor_id` dans toutes les méthodes
+  * ✅ `getCurrentOccupancy()` compte les instructeurs au lieu des biplaceurs
+  * ✅ `checkWeightLimit()` accepte `instructorId` au lieu de `array $biplaceurs`
+  * ✅ `calculateReservationWeight()` utilise `activitySessions` au lieu de `flights`
+  * ✅ Poids instructeur récupéré depuis `Instructor->metadata['weight']`
+  * ✅ Nouvelles méthodes : `countPassengers()` et `calculateNeededSeats()`
+
+* **DashboardService refactorisé** (`app/Services/DashboardService.php`) :
+  * ✅ `getTopBiplaceurs()` remplacé par `getTopInstructors(?string $activityType = null)`
+  * ✅ `getFlightStats()` remplacé par `getActivityStats(?string $activityType = null)`
+  * ✅ Utilise `ActivitySession` au lieu de `Reservation` pour les statistiques
+  * ✅ Groupe par `activity_type` au lieu de `flight_type`
+  * ✅ Support multi-niche avec filtrage par type d'activité
+  * ✅ Méthodes deprecated maintenues pour rétrocompatibilité
+
+* **Tests créés/mis à jour** :
+  * ✅ `VehicleServiceTest` : 3 nouveaux tests ajoutés (calcul poids, comptage passagers, sièges nécessaires)
+  * ✅ `DashboardServiceTest` : 4 nouveaux tests créés (top instructeurs, filtrage par activité, stats, rétrocompatibilité)
+  * ✅ **13 tests passent** (9 VehicleService + 4 DashboardService)
+
+#### 📊 Résultats
+* **3 services généralisés** ✅
+* **Aucune référence à Biplaceur** dans les services refactorisés ✅
+* **Support multi-niche** : filtrage par `activity_type` dans DashboardService ✅
+* **Rétrocompatibilité** maintenue avec méthodes `@deprecated` ✅
+* **13/13 tests passent** (22 assertions) ✅
+
+---
+
 ### ✅ **Phase 3 - Création InstructorService** (TERMINÉE)
 
 **Statut :** ✅ Terminée — InstructorService créé, 8 tests créés, 21 assertions, tous les tests passent
@@ -130,7 +173,7 @@
 
 ### 📋 **Analyse et Plan de Correction - Généralisation**
 
-**Statut :** 🔄 En cours - Phases 1, 2 et 3 terminées, Phase 4 à démarrer
+**Statut :** 🔄 En cours - Phases 1, 2, 3 et 4 terminées, Phase 5 à démarrer
 
 #### 📄 Documentation créée
 * **Analyse des incohérences** : `docs/INCOHERENCES_GENERALISATION.md`
@@ -146,7 +189,7 @@
 * ✅ Modèle `Reservation` - **GÉNÉRALISÉ** (Phase 1 terminée)
 * ✅ **ReservationService** - **GÉNÉRALISÉ** (Phase 2 terminée)
 * ✅ **InstructorService** - **CRÉÉ** (Phase 3 terminée)
-* ⚠️ Services spécifiques (StripeTerminalService, VehicleService, DashboardService) - Phase 4
+* ✅ **Services spécifiques** - **GÉNÉRALISÉS** (Phase 4 terminée)
 * ⚠️ Contrôleurs avec logique mixte - Phase 5
 * ⚠️ Routes API dupliquées - Phase 6
 
@@ -154,8 +197,8 @@
 * ✅ Phase 1: Migration du modèle Reservation (1 jour) - **TERMINÉE**
 * ✅ Phase 2: Refactorisation ReservationService (1.5 jours) - **TERMINÉE**
 * ✅ Phase 3: Création InstructorService (0.5 jour) - **TERMINÉE**
-* ⏳ Phase 4: Refactorisation services spécifiques (1 jour) - **À DÉMARRER**
-* ⏳ Phase 5: Refactorisation contrôleurs (1 jour)
+* ✅ Phase 4: Refactorisation services spécifiques (1 jour) - **TERMINÉE**
+* ⏳ Phase 5: Refactorisation contrôleurs (1 jour) - **À DÉMARRER**
 * ⏳ Phase 6: Nettoyage et routes (0.5 jour)
 
 ---

@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Reservation;
 use App\Models\Payment;
-use App\Models\Biplaceur;
+use App\Models\Instructor;
 use Stripe\StripeClient;
 use Stripe\Exception\ApiErrorException;
 use Illuminate\Support\Facades\Log;
@@ -37,23 +37,31 @@ class StripeTerminalService
     /**
      * Générer un connection token pour Stripe Terminal
      */
-    public function getConnectionToken(int $biplaceurId): string
+    public function getConnectionToken(int $instructorId): string
     {
-        $biplaceur = Biplaceur::findOrFail($biplaceurId);
+        $instructor = Instructor::findOrFail($instructorId);
 
-        if (!$biplaceur->can_tap_to_pay) {
-            throw new \Exception('Ce biplaceur n\'a pas accès à Stripe Terminal');
+        // Récupérer can_tap_to_pay depuis metadata
+        $canTapToPay = $instructor->metadata['can_tap_to_pay'] ?? false;
+        if (!$canTapToPay) {
+            throw new \Exception('Cet instructeur n\'a pas accès à Stripe Terminal');
+        }
+
+        // Récupérer stripe_terminal_location_id depuis metadata
+        $terminalLocationId = $instructor->metadata['stripe_terminal_location_id'] ?? null;
+        if (!$terminalLocationId) {
+            throw new \Exception('Location Stripe Terminal non configurée pour cet instructeur');
         }
 
         try {
-            $connectionToken = $this->stripe->terminal->connectionTokens->create([
-                'location' => $biplaceur->stripe_terminal_location_id,
+            $connectionToken = $this->getStripeClient()->terminal->connectionTokens->create([
+                'location' => $terminalLocationId,
             ]);
 
             return $connectionToken->secret;
         } catch (ApiErrorException $e) {
             Log::error('Stripe Terminal connection token failed', [
-                'biplaceur_id' => $biplaceurId,
+                'instructor_id' => $instructorId,
                 'error' => $e->getMessage(),
             ]);
 
@@ -70,7 +78,7 @@ class StripeTerminalService
         string $currency = 'eur'
     ): array {
         try {
-            $intent = $this->stripe->paymentIntents->create([
+            $intent = $this->getStripeClient()->paymentIntents->create([
                 'amount' => (int) ($amount * 100),
                 'currency' => $currency,
                 'capture_method' => 'automatic', // Capture automatique pour terminal
@@ -102,7 +110,7 @@ class StripeTerminalService
     public function processTerminalPayment(string $paymentIntentId, array $metadata = []): Payment
     {
         try {
-            $intent = $this->stripe->paymentIntents->retrieve($paymentIntentId);
+            $intent = $this->getStripeClient()->paymentIntents->retrieve($paymentIntentId);
 
             if ($intent->status !== 'succeeded') {
                 throw new \Exception("Le paiement n'a pas réussi");
@@ -154,7 +162,7 @@ class StripeTerminalService
     {
         try {
             // Créer une session Checkout Stripe
-            $session = $this->stripe->checkout->sessions->create([
+            $session = $this->getStripeClient()->checkout->sessions->create([
                 'payment_method_types' => ['card'],
                 'line_items' => [[
                     'price_data' => [

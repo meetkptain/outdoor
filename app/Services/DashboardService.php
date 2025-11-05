@@ -4,7 +4,8 @@ namespace App\Services;
 
 use App\Models\Reservation;
 use App\Models\Payment;
-use App\Models\Biplaceur;
+use App\Models\Instructor;
+use App\Models\ActivitySession;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 
@@ -29,11 +30,11 @@ class DashboardService
                 'start_date' => $startDate->format('Y-m-d'),
                 'end_date' => $endDate->format('Y-m-d'),
                 'total_reservations' => $reservations->count(),
-                'completed_flights' => $reservations->where('status', 'completed')->count(),
+                'completed_sessions' => $reservations->where('status', 'completed')->count(),
                 'pending_reservations' => $reservations->where('status', 'pending')->count(),
-                'scheduled_flights' => $reservations->where('status', 'scheduled')->count(),
+                'scheduled_sessions' => $reservations->where('status', 'scheduled')->count(),
                 'total_revenue' => $payments->sum('amount'),
-                'average_revenue_per_flight' => $reservations->where('status', 'completed')->count() > 0
+                'average_revenue_per_session' => $reservations->where('status', 'completed')->count() > 0
                     ? $payments->sum('amount') / $reservations->where('status', 'completed')->count()
                     : 0,
                 'cancellation_rate' => $reservations->count() > 0
@@ -94,56 +95,90 @@ class DashboardService
     }
 
     /**
-     * Récupérer les top biplaceurs
+     * Récupérer les top instructeurs
      */
-    public function getTopBiplaceurs(int $limit = 10, string $period = 'month'): Collection
+    public function getTopInstructors(int $limit = 10, string $period = 'month', ?string $activityType = null): Collection
     {
         $startDate = $this->getStartDate($period);
 
-        return Biplaceur::with(['user', 'reservations' => function ($query) use ($startDate) {
+        $query = Instructor::with(['user', 'sessions' => function ($query) use ($startDate, $activityType) {
             $query->where('created_at', '>=', $startDate)
                 ->where('status', 'completed');
-        }])
-            ->get()
-            ->map(function ($biplaceur) {
+            
+            if ($activityType) {
+                $query->whereHas('activity', function ($q) use ($activityType) {
+                    $q->where('activity_type', $activityType);
+                });
+            }
+        }]);
+
+        return $query->get()
+            ->map(function ($instructor) {
                 return [
-                    'id' => $biplaceur->id,
-                    'name' => $biplaceur->user->name,
-                    'total_flights' => $biplaceur->reservations->count(),
-                    'total_flights_all_time' => $biplaceur->total_flights,
+                    'id' => $instructor->id,
+                    'name' => $instructor->user->name,
+                    'total_sessions' => $instructor->sessions->count(),
+                    'total_sessions_all_time' => ActivitySession::where('instructor_id', $instructor->id)
+                        ->where('status', 'completed')
+                        ->count(),
                 ];
             })
-            ->sortByDesc('total_flights')
+            ->sortByDesc('total_sessions')
             ->take($limit)
             ->values();
     }
 
     /**
-     * Statistiques des vols
+     * @deprecated Utiliser getTopInstructors() à la place
      */
-    public function getFlightStats(string $period = 'month'): array
+    public function getTopBiplaceurs(int $limit = 10, string $period = 'month'): Collection
+    {
+        return $this->getTopInstructors($limit, $period, 'paragliding');
+    }
+
+    /**
+     * Statistiques des activités (sessions)
+     */
+    public function getActivityStats(string $period = 'month', ?string $activityType = null): array
     {
         $startDate = $this->getStartDate($period);
         $endDate = now();
 
-        $reservations = Reservation::whereBetween('created_at', [$startDate, $endDate])->get();
+        $query = ActivitySession::whereBetween('created_at', [$startDate, $endDate]);
+        
+        if ($activityType) {
+            $query->whereHas('activity', function ($q) use ($activityType) {
+                $q->where('activity_type', $activityType);
+            });
+        }
+
+        $sessions = $query->get();
 
         return [
             'period' => $period,
-            'total_flights' => $reservations->count(),
+            'activity_type' => $activityType,
+            'total_sessions' => $sessions->count(),
             'by_status' => [
-                'pending' => $reservations->where('status', 'pending')->count(),
-                'authorized' => $reservations->where('status', 'authorized')->count(),
-                'scheduled' => $reservations->where('status', 'scheduled')->count(),
-                'completed' => $reservations->where('status', 'completed')->count(),
-                'cancelled' => $reservations->where('status', 'cancelled')->count(),
-                'rescheduled' => $reservations->where('status', 'rescheduled')->count(),
+                'pending' => $sessions->where('status', 'pending')->count(),
+                'scheduled' => $sessions->where('status', 'scheduled')->count(),
+                'completed' => $sessions->where('status', 'completed')->count(),
+                'cancelled' => $sessions->where('status', 'cancelled')->count(),
             ],
-            'by_flight_type' => $reservations->groupBy('flight_type')->map->count(),
-            'completion_rate' => $reservations->count() > 0
-                ? ($reservations->where('status', 'completed')->count() / $reservations->count()) * 100
+            'by_activity_type' => $sessions->groupBy(function ($session) {
+                return $session->activity->activity_type ?? 'unknown';
+            })->map->count(),
+            'completion_rate' => $sessions->count() > 0
+                ? ($sessions->where('status', 'completed')->count() / $sessions->count()) * 100
                 : 0,
         ];
+    }
+
+    /**
+     * @deprecated Utiliser getActivityStats() à la place
+     */
+    public function getFlightStats(string $period = 'month'): array
+    {
+        return $this->getActivityStats($period, 'paragliding');
     }
 
     /**

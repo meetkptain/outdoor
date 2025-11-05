@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Resource;
 use App\Models\Reservation;
-use App\Models\Biplaceur;
+use App\Models\Instructor;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -75,7 +75,7 @@ class VehicleService
 
     /**
      * Obtenir l'occupation actuelle d'une navette à une date/heure donnée
-     * Compte les passagers (clients + biplaceurs) mais pas le chauffeur
+     * Compte les passagers (clients + instructeurs) mais pas le chauffeur
      */
     public function getCurrentOccupancy(int $vehicleId, \DateTime $dateTime, ?int $excludeReservationId = null): int
     {
@@ -94,15 +94,15 @@ class VehicleService
 
         $reservations = $query->get();
 
-        // Compter les passagers : clients + biplaceurs
+        // Compter les passagers : clients + instructeurs
         $totalOccupancy = 0;
 
         foreach ($reservations as $reservation) {
             // Ajouter le nombre de participants (clients)
             $totalOccupancy += $reservation->participants_count;
 
-            // Ajouter 1 pour le biplaceur si assigné
-            if ($reservation->biplaceur_id) {
+            // Ajouter 1 pour l'instructeur si assigné
+            if ($reservation->instructor_id) {
                 $totalOccupancy += 1;
             }
         }
@@ -113,7 +113,7 @@ class VehicleService
     /**
      * Vérifier si le poids total des passagers respecte la limite de la navette
      */
-    public function checkWeightLimit(int $vehicleId, array $passengers, array $biplaceurs = []): bool
+    public function checkWeightLimit(int $vehicleId, array $passengers, ?int $instructorId = null): bool
     {
         $vehicle = Resource::find($vehicleId);
         if (!$vehicle || $vehicle->type !== 'vehicle') {
@@ -130,9 +130,15 @@ class VehicleService
             $totalWeight += $passenger['weight'] ?? 0;
         }
 
-        // Poids des biplaceurs (en moyenne 80kg par défaut si non spécifié)
-        foreach ($biplaceurs as $biplaceur) {
-            $totalWeight += $biplaceur['weight'] ?? 80;
+        // Poids de l'instructeur si spécifié (depuis metadata ou valeur par défaut)
+        if ($instructorId) {
+            $instructor = Instructor::find($instructorId);
+            if ($instructor) {
+                $instructorWeight = $instructor->metadata['weight'] ?? 80;
+                $totalWeight += $instructorWeight;
+            } else {
+                $totalWeight += 80; // Valeur par défaut
+            }
         }
 
         // Poids du chauffeur (estimé à 80kg)
@@ -154,9 +160,9 @@ class VehicleService
     }
 
     /**
-     * Calculer le poids total d'une réservation (client + biplaceur)
+     * Calculer le poids total d'une réservation (client + instructeur)
      */
-    public function calculateReservationWeight(Reservation $reservation): int
+    public function calculateReservationWeight(Reservation $reservation): float
     {
         $totalWeight = 0;
 
@@ -165,16 +171,23 @@ class VehicleService
             $totalWeight += $reservation->customer_weight;
         }
 
-        // Poids des participants additionnels (via flights)
-        foreach ($reservation->flights as $flight) {
-            if ($flight->participant_weight) {
-                $totalWeight += $flight->participant_weight;
+        // Poids des participants additionnels (via activitySessions)
+        foreach ($reservation->activitySessions as $session) {
+            $participantWeight = $session->metadata['participant_weight'] ?? null;
+            if ($participantWeight) {
+                $totalWeight += $participantWeight;
             }
         }
 
-        // Poids du biplaceur si assigné (estimé à 80kg par défaut)
-        if ($reservation->biplaceur_id) {
-            $totalWeight += 80; // Estimation, pourrait être stocké dans biplaceurs
+        // Poids de l'instructeur si assigné (depuis metadata ou valeur par défaut)
+        if ($reservation->instructor_id) {
+            $instructor = Instructor::find($reservation->instructor_id);
+            if ($instructor) {
+                $instructorWeight = $instructor->metadata['weight'] ?? 80;
+                $totalWeight += $instructorWeight;
+            } else {
+                $totalWeight += 80; // Valeur par défaut
+            }
         }
 
         return $totalWeight;
@@ -191,7 +204,7 @@ class VehicleService
         // Vérifier capacité
         if (!$this->checkCapacity($vehicleId, $dateTime, $reservation->id)) {
             $availableSeats = $this->getAvailableSeats($vehicleId, $dateTime, $reservation->id);
-            $neededSeats = $reservation->participants_count + ($reservation->biplaceur_id ? 1 : 0);
+            $neededSeats = $reservation->participants_count + ($reservation->instructor_id ? 1 : 0);
             $errors[] = "Navette pleine. Places disponibles: {$availableSeats}, Places nécessaires: {$neededSeats}";
         }
 
@@ -228,6 +241,29 @@ class VehicleService
             'can_assign' => empty($errors),
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Compter le nombre de passagers d'une réservation
+     */
+    public function countPassengers(Reservation $reservation): int
+    {
+        $count = $reservation->participants_count;
+        
+        // Ajouter l'instructeur si assigné
+        if ($reservation->instructor_id) {
+            $count += 1;
+        }
+        
+        return $count;
+    }
+
+    /**
+     * Calculer le nombre de sièges nécessaires pour une réservation
+     */
+    public function calculateNeededSeats(Reservation $reservation): int
+    {
+        return $this->countPassengers($reservation);
     }
 
     /**

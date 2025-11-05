@@ -146,5 +146,85 @@ class VehicleServiceTest extends TestCase
         // 8 passagers max - 3 déjà assignés = 5 disponibles
         $this->assertEquals(5, $availableSeats);
     }
+
+    /**
+     * Test calcul poids avec instructeur
+     */
+    public function test_calculates_weight_with_instructor(): void
+    {
+        $organization = \App\Models\Organization::factory()->create();
+        $instructor = \App\Models\Instructor::factory()->create([
+            'organization_id' => $organization->id,
+            'metadata' => ['weight' => 85],
+        ]);
+
+        $vehicle = Resource::factory()->create([
+            'type' => 'vehicle',
+            'organization_id' => $organization->id,
+            'specifications' => ['max_weight' => 500],
+        ]);
+
+        $passengers = [
+            ['weight' => 70],
+            ['weight' => 65],
+        ];
+
+        // Poids total: 70 + 65 + 85 (instructeur) + 80 (chauffeur) = 300kg
+        $isValid = $this->service->checkWeightLimit($vehicle->id, $passengers, $instructor->id);
+
+        $this->assertTrue($isValid);
+    }
+
+    /**
+     * Test compter passagers avec instructeur
+     */
+    public function test_counts_passengers_with_instructor(): void
+    {
+        $organization = \App\Models\Organization::factory()->create();
+        $instructor = \App\Models\Instructor::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $organization->id,
+            'participants_count' => 2,
+            'instructor_id' => $instructor->id,
+            'base_amount' => 100,
+            'options_amount' => 0,
+            'total_amount' => 100,
+            'deposit_amount' => 50,
+        ]);
+
+        $count = $this->service->countPassengers($reservation);
+
+        // 2 participants + 1 instructeur = 3
+        $this->assertEquals(3, $count);
+    }
+
+    /**
+     * Test calcul sièges nécessaires
+     */
+    public function test_calculates_needed_seats(): void
+    {
+        $organization = \App\Models\Organization::factory()->create();
+        $instructor = \App\Models\Instructor::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $organization->id,
+            'participants_count' => 3,
+            'instructor_id' => $instructor->id,
+            'base_amount' => 100,
+            'options_amount' => 0,
+            'total_amount' => 100,
+            'deposit_amount' => 50,
+        ]);
+
+        $seats = $this->service->calculateNeededSeats($reservation);
+
+        // 3 participants + 1 instructeur = 4 sièges
+        $this->assertEquals(4, $seats);
+    }
 }
 
