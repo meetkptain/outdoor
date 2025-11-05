@@ -29,11 +29,13 @@ class ReservationServiceTest extends TestCase
         $this->paymentServiceMock = Mockery::mock(PaymentService::class);
         $this->notificationServiceMock = Mockery::mock(NotificationService::class);
         $this->vehicleServiceMock = Mockery::mock(VehicleService::class);
+        $moduleRegistry = app(\App\Modules\ModuleRegistry::class);
 
         $this->service = new ReservationService(
             $this->paymentServiceMock,
             $this->notificationServiceMock,
-            $this->vehicleServiceMock
+            $this->vehicleServiceMock,
+            $moduleRegistry
         );
     }
 

@@ -3,10 +3,13 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Reservation;
+use App\Models\Activity;
+use App\Models\Organization;
 use App\Services\PaymentService;
 use App\Services\ReservationService;
 use App\Services\NotificationService;
 use App\Services\VehicleService;
+use App\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Mockery;
@@ -19,19 +22,37 @@ class ReservationServiceValidationTest extends TestCase
     protected $paymentServiceMock;
     protected $notificationServiceMock;
     protected $vehicleServiceMock;
+    protected Organization $organization;
+    protected Activity $activity;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->organization = Organization::factory()->create();
+        $this->activity = Activity::factory()->create([
+            'organization_id' => $this->organization->id,
+            'activity_type' => 'paragliding',
+            'constraints_config' => [
+                'weight' => ['min' => 40, 'max' => 120],
+                'height' => ['min' => 140, 'max' => 250],
+            ],
+            'pricing_config' => [
+                'tandem' => 120,
+                'base_price' => 120,
+            ],
+        ]);
+
         $this->paymentServiceMock = Mockery::mock(PaymentService::class);
         $this->notificationServiceMock = Mockery::mock(NotificationService::class);
         $this->vehicleServiceMock = Mockery::mock(VehicleService::class);
+        $moduleRegistry = app(ModuleRegistry::class);
 
         $this->service = new ReservationService(
             $this->paymentServiceMock,
             $this->notificationServiceMock,
-            $this->vehicleServiceMock
+            $this->vehicleServiceMock,
+            $moduleRegistry
         );
     }
 
@@ -41,13 +62,14 @@ class ReservationServiceValidationTest extends TestCase
     public function test_rejects_reservation_with_weight_below_minimum(): void
     {
         $data = [
+            'activity_id' => $this->activity->id,
             'customer_email' => 'test@example.com',
             'customer_first_name' => 'John',
             'customer_last_name' => 'Doe',
-            'flight_type' => 'tandem',
             'participants_count' => 1,
             'customer_weight' => 35, // En dessous du minimum
             'payment_type' => 'deposit',
+            'metadata' => ['original_flight_type' => 'tandem'],
         ];
 
         $this->expectException(\Exception::class);
@@ -65,7 +87,8 @@ class ReservationServiceValidationTest extends TestCase
             'customer_email' => 'test@example.com',
             'customer_first_name' => 'John',
             'customer_last_name' => 'Doe',
-            'flight_type' => 'tandem',
+            'activity_id' => $this->activity->id,
+            'metadata' => ['original_flight_type' => 'tandem'],
             'participants_count' => 1,
             'customer_weight' => 125, // Au dessus du maximum
             'payment_type' => 'deposit',
@@ -86,14 +109,15 @@ class ReservationServiceValidationTest extends TestCase
             'customer_email' => 'test@example.com',
             'customer_first_name' => 'John',
             'customer_last_name' => 'Doe',
-            'flight_type' => 'tandem',
+            'activity_id' => $this->activity->id,
+            'metadata' => ['original_flight_type' => 'tandem'],
             'participants_count' => 1,
             'customer_height' => 130, // En dessous du minimum
             'payment_type' => 'deposit',
         ];
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Taille minimum requise: 1.40m (140cm)');
+        $this->expectExceptionMessage('Taille minimum requise: 140cm');
 
         $this->service->createReservation($data);
     }
@@ -107,7 +131,8 @@ class ReservationServiceValidationTest extends TestCase
             'customer_email' => 'test@example.com',
             'customer_first_name' => 'John',
             'customer_last_name' => 'Doe',
-            'flight_type' => 'tandem',
+            'activity_id' => $this->activity->id,
+            'metadata' => ['original_flight_type' => 'tandem'],
             'participants_count' => 1,
             'customer_weight' => 75, // Valide
             'customer_height' => 175, // Valide

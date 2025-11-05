@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Models\Reservation;
+use App\Models\Activity;
+use App\Models\ActivitySession;
+use App\Models\Instructor;
 use App\Models\Option;
 use App\Models\Coupon;
 use App\Models\GiftCard;
-use App\Models\Flight;
+use App\Modules\ModuleRegistry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,15 +18,18 @@ class ReservationService
     protected PaymentService $paymentService;
     protected NotificationService $notificationService;
     protected VehicleService $vehicleService;
+    protected ModuleRegistry $moduleRegistry;
 
     public function __construct(
         PaymentService $paymentService,
         NotificationService $notificationService,
-        VehicleService $vehicleService
+        VehicleService $vehicleService,
+        ModuleRegistry $moduleRegistry
     ) {
         $this->paymentService = $paymentService;
         $this->notificationService = $notificationService;
         $this->vehicleService = $vehicleService;
+        $this->moduleRegistry = $moduleRegistry;
     }
 
     /**
@@ -34,24 +40,14 @@ class ReservationService
         DB::beginTransaction();
 
         try {
-            // Valider les contraintes client (poids et taille)
-            if (isset($data['customer_weight'])) {
-                if ($data['customer_weight'] < 40) {
-                    throw new \Exception("Poids minimum requis: 40kg");
-                }
-                if ($data['customer_weight'] > 120) {
-                    throw new \Exception("Poids maximum autorisé: 120kg");
-                }
-            }
+            // Récupérer l'activité
+            $activity = Activity::findOrFail($data['activity_id']);
             
-            if (isset($data['customer_height'])) {
-                if ($data['customer_height'] < 140) {
-                    throw new \Exception("Taille minimum requise: 1.40m (140cm)");
-                }
-            }
+            // Valider les contraintes depuis l'activité
+            $this->validateConstraints($activity, $data);
 
-            // Calculer les montants
-            $baseAmount = $this->calculateBaseAmount($data['flight_type'], $data['participants_count']);
+            // Calculer les montants depuis l'activité
+            $baseAmount = $this->calculateBaseAmount($activity, $data['participants_count'], $data['metadata']['original_flight_type'] ?? null);
             $optionsAmount = $this->calculateOptionsAmount($data['options'] ?? [], $data['participants_count']);
             $subtotal = $baseAmount + $optionsAmount;
 
@@ -61,7 +57,8 @@ class ReservationService
             if (!empty($data['coupon_code'])) {
                 $coupon = Coupon::where('code', $data['coupon_code'])->first();
                 if ($coupon && $coupon->isValid()) {
-                    $discountAmount = $coupon->calculateDiscount($subtotal, $data['flight_type']);
+                    // Utiliser activity_type au lieu de flight_type
+                    $discountAmount = $coupon->calculateDiscount($subtotal, $activity->activity_type);
                     $coupon->incrementUsage();
                 }
             }
@@ -91,6 +88,9 @@ class ReservationService
 
             // Créer la réservation
             $reservation = Reservation::create([
+                'organization_id' => $activity->organization_id,
+                'activity_id' => $activity->id,
+                'activity_type' => $activity->activity_type,
                 'user_id' => $data['user_id'] ?? null,
                 'customer_email' => $data['customer_email'],
                 'customer_phone' => $data['customer_phone'] ?? null,
@@ -99,7 +99,6 @@ class ReservationService
                 'customer_birth_date' => $data['customer_birth_date'] ?? null,
                 'customer_weight' => $data['customer_weight'] ?? null,
                 'customer_height' => $data['customer_height'] ?? null,
-                'flight_type' => $data['flight_type'],
                 'participants_count' => $data['participants_count'],
                 'special_requests' => $data['special_requests'] ?? null,
                 'status' => 'pending',
@@ -114,6 +113,9 @@ class ReservationService
                 'authorized_amount' => $authorizedAmount,
                 'payment_type' => $paymentType,
                 'payment_status' => 'pending',
+                'metadata' => [
+                    'original_flight_type' => $data['metadata']['original_flight_type'] ?? null,
+                ],
             ]);
 
             // Ajouter les options
@@ -130,17 +132,12 @@ class ReservationService
                 }
             }
 
-            // Créer les flights pour chaque participant
-            for ($i = 0; $i < $data['participants_count']; $i++) {
-                Flight::create([
-                    'reservation_id' => $reservation->id,
-                    'participant_first_name' => $data['participants'][$i]['first_name'] ?? $data['customer_first_name'],
-                    'participant_last_name' => $data['participants'][$i]['last_name'] ?? $data['customer_last_name'],
-                    'participant_birth_date' => $data['participants'][$i]['birth_date'] ?? $data['customer_birth_date'] ?? null,
-                    'participant_weight' => $data['participants'][$i]['weight'] ?? $data['customer_weight'] ?? null,
-                    'status' => 'pending',
-                ]);
-            }
+            // Créer les sessions d'activité pour chaque participant
+            // Note: Les sessions seront planifiées plus tard lors de l'assignation
+            // Pour l'instant, on peut créer des sessions sans scheduled_at (sera ajouté lors de scheduleReservation)
+            // Ou ne pas les créer ici et les créer lors de scheduleReservation
+            // Pour l'instant, on ne les crée pas ici car scheduled_at est requis
+            // Elles seront créées lors de scheduleReservation ou assignResources
 
             // Utiliser le bon cadeau si applicable
             if ($giftCard && $giftCardAmount > 0) {
@@ -168,11 +165,36 @@ class ReservationService
 
     /**
      * Ajouter des options à une réservation existante
+     * Stages génériques depuis le workflow du module
      */
-    public function addOptions(Reservation $reservation, array $options, string $stage = 'before_flight'): void
+    public function addOptions(Reservation $reservation, array $options, ?string $stage = null): void
     {
         if (!$reservation->canAddOptions()) {
             throw new \Exception("Impossible d'ajouter des options à cette réservation");
+        }
+
+        // Récupérer les stages valides depuis le workflow du module
+        $activity = $reservation->activity;
+        $module = $this->moduleRegistry->get($activity->activity_type);
+        $workflow = $module?->getWorkflow() ?? [];
+        $validStages = $workflow['stages'] ?? ['pending', 'authorized', 'scheduled', 'completed'];
+
+        // Si stage non fourni, utiliser le premier stage valide
+        if ($stage === null) {
+            $stage = 'pending'; // Stage par défaut
+        }
+
+        // Valider le stage (pour rétrocompatibilité, accepter aussi 'before_flight' et 'after_flight')
+        $stageMapping = [
+            'before_flight' => 'scheduled',
+            'after_flight' => 'completed',
+        ];
+        if (isset($stageMapping[$stage])) {
+            $stage = $stageMapping[$stage];
+        }
+
+        if (!in_array($stage, $validStages)) {
+            throw new \Exception("Stage invalide: {$stage}. Stages valides: " . implode(', ', $validStages));
         }
 
         DB::beginTransaction();
@@ -227,8 +249,8 @@ class ReservationService
 
             DB::commit();
 
-            // Notifier le client si nécessaire
-            if ($stage === 'after_flight') {
+            // Notifier le client selon le stage (peut être configuré dans le workflow)
+            if ($stage === 'completed' || in_array($stage, $workflow['notify_on_stages'] ?? [])) {
                 $this->notificationService->sendOptionsAddedNotification($reservation);
             }
         } catch (\Exception $e) {
@@ -320,20 +342,75 @@ class ReservationService
     }
 
     /**
-     * Calculer le montant de base selon le type de vol
+     * Valider les contraintes depuis l'activité
      */
-    protected function calculateBaseAmount(string $flightType, int $participants): float
+    protected function validateConstraints(Activity $activity, array $data): void
     {
-        $prices = config('reservations.base_prices', [
-            'tandem' => 120,
-            'biplace' => 150,
-            'initiation' => 200,
-            'perfectionnement' => 180,
-            'autonome' => 100,
-        ]);
+        $constraints = $activity->constraints_config ?? [];
 
-        $basePrice = $prices[$flightType] ?? 120;
-        return $basePrice * $participants;
+        // Valider le poids
+        if (isset($data['customer_weight']) && isset($constraints['weight'])) {
+            $minWeight = $constraints['weight']['min'] ?? null;
+            $maxWeight = $constraints['weight']['max'] ?? null;
+
+            if ($minWeight !== null && $data['customer_weight'] < $minWeight) {
+                throw new \Exception("Poids minimum requis: {$minWeight}kg");
+            }
+            if ($maxWeight !== null && $data['customer_weight'] > $maxWeight) {
+                throw new \Exception("Poids maximum autorisé: {$maxWeight}kg");
+            }
+        }
+
+        // Valider la taille
+        if (isset($data['customer_height']) && isset($constraints['height'])) {
+            $minHeight = $constraints['height']['min'] ?? null;
+            $maxHeight = $constraints['height']['max'] ?? null;
+
+            if ($minHeight !== null && $data['customer_height'] < $minHeight) {
+                throw new \Exception("Taille minimum requise: {$minHeight}cm");
+            }
+            if ($maxHeight !== null && $data['customer_height'] > $maxHeight) {
+                throw new \Exception("Taille maximum autorisée: {$maxHeight}cm");
+            }
+        }
+
+        // Valider l'âge si nécessaire
+        if (isset($data['customer_birth_date']) && isset($constraints['age'])) {
+            $minAge = $constraints['age']['min'] ?? null;
+            $maxAge = $constraints['age']['max'] ?? null;
+
+            if ($minAge !== null || $maxAge !== null) {
+                $age = \Carbon\Carbon::parse($data['customer_birth_date'])->age;
+                if ($minAge !== null && $age < $minAge) {
+                    throw new \Exception("Âge minimum requis: {$minAge} ans");
+                }
+                if ($maxAge !== null && $age > $maxAge) {
+                    throw new \Exception("Âge maximum autorisé: {$maxAge} ans");
+                }
+            }
+        }
+    }
+
+    /**
+     * Calculer le montant de base depuis l'activité
+     */
+    protected function calculateBaseAmount(Activity $activity, int $participants, ?string $originalFlightType = null): float
+    {
+        $pricing = $activity->pricing_config ?? [];
+
+        // Si pricing_config contient un prix de base
+        if (isset($pricing['base_price'])) {
+            return $pricing['base_price'] * $participants;
+        }
+
+        // Si pricing_config contient des prix par type (pour rétrocompatibilité avec paragliding)
+        if ($originalFlightType && isset($pricing[$originalFlightType])) {
+            return $pricing[$originalFlightType] * $participants;
+        }
+
+        // Prix par défaut depuis config ou fallback
+        $defaultPrice = config('reservations.base_prices.default', 120);
+        return $defaultPrice * $participants;
     }
 
     /**
@@ -358,7 +435,7 @@ class ReservationService
     }
 
     /**
-     * Planifier une réservation (assigner date et biplaceur)
+     * Planifier une réservation (assigner date et instructeur)
      */
     public function scheduleReservation(Reservation $reservation, array $data): void
     {
@@ -370,41 +447,58 @@ class ReservationService
                 ? new \DateTime($data['scheduled_at']) 
                 : $data['scheduled_at'];
 
-            // Valider limite de vols par jour pour le biplaceur
-            $biplaceur = \App\Models\Biplaceur::find($data['biplaceur_id']);
-            if ($biplaceur) {
-                $flightsToday = $biplaceur->getFlightsToday()->count();
-                $maxFlights = $biplaceur->max_flights_per_day ?? 5;
-                
-                if ($flightsToday >= $maxFlights) {
-                    throw new \Exception("Limite de vols atteinte pour ce biplaceur ({$maxFlights} vols/jour maximum). Vols aujourd'hui: {$flightsToday}");
+            // Récupérer l'instructeur (peut venir de instructor_id ou biplaceur_id pour rétrocompatibilité)
+            $instructorId = $data['instructor_id'] ?? $data['biplaceur_id'] ?? null;
+            if (!$instructorId) {
+                throw new \Exception("Aucun instructeur spécifié");
+            }
+
+            $instructor = Instructor::findOrFail($instructorId);
+            $activity = $reservation->activity;
+
+            // Vérifier que l'instructeur peut enseigner cette activité
+            if (!$instructor->canTeachActivity($activity->activity_type)) {
+                throw new \Exception("L'instructeur n'est pas qualifié pour cette activité: {$activity->activity_type}");
+            }
+
+            // Valider limite de sessions par jour pour l'instructeur
+            $sessionsToday = $instructor->getSessionsToday()->count();
+            $maxSessions = $instructor->max_sessions_per_day ?? 5;
+            
+            if ($sessionsToday >= $maxSessions) {
+                throw new \Exception("Limite de sessions atteinte pour cet instructeur ({$maxSessions} sessions/jour maximum). Sessions aujourd'hui: {$sessionsToday}");
+            }
+
+            // Vérifier pause obligatoire entre rotations (depuis metadata du module ou 30 min par défaut)
+            $module = $this->moduleRegistry->get($activity->activity_type);
+            $rotationDuration = $module?->getFeature('rotation_duration') ?? 30;
+
+            $lastSession = $instructor->sessions()
+                ->whereDate('scheduled_at', $scheduledAt->format('Y-m-d'))
+                ->whereIn('status', ['scheduled', 'completed'])
+                ->whereHas('reservation', function($q) use ($reservation) {
+                    $q->where('id', '!=', $reservation->id);
+                })
+                ->orderBy('scheduled_at', 'desc')
+                ->first();
+
+            if ($lastSession && $lastSession->scheduled_at) {
+                $timeDiff = $scheduledAt->getTimestamp() - $lastSession->scheduled_at->getTimestamp();
+                $timeDiffMinutes = $timeDiff / 60;
+                if ($timeDiff > 0 && $timeDiffMinutes < $rotationDuration) {
+                    throw new \Exception("Pause obligatoire de {$rotationDuration} min entre rotations. Dernière session: {$lastSession->scheduled_at->format('H:i')}, Session demandée: {$scheduledAt->format('H:i')} (écart: " . round($timeDiffMinutes) . " min)");
                 }
+            }
 
-                // Vérifier pause obligatoire entre rotations (30 min minimum)
-                $lastFlight = $biplaceur->reservations()
-                    ->whereDate('scheduled_at', $scheduledAt->format('Y-m-d'))
-                    ->whereIn('status', ['scheduled', 'confirmed'])
-                    ->where('id', '!=', $reservation->id)
-                    ->orderBy('scheduled_at', 'desc')
-                    ->first();
-
-                if ($lastFlight && $lastFlight->scheduled_at) {
-                    $timeDiff = $scheduledAt->diffInMinutes($lastFlight->scheduled_at);
-                    if ($timeDiff > 0 && $timeDiff < 30) {
-                        throw new \Exception("Pause obligatoire de 30 min entre rotations. Dernier vol: {$lastFlight->scheduled_at->format('H:i')}, Vol demandé: {$scheduledAt->format('H:i')} (écart: {$timeDiff} min)");
-                    }
-                }
-
-                // Vérifier compétences biplaceur pour options requises
-                $reservation->load('options');
-                foreach ($reservation->options as $option) {
-                    // Si l'option nécessite une certification (ex: photo, vidéo)
-                    if (isset($option->metadata['requires_certification'])) {
-                        $requiredCert = $option->metadata['requires_certification'];
-                        $biplaceurCerts = $biplaceur->certifications ?? [];
-                        if (!in_array($requiredCert, $biplaceurCerts)) {
-                            throw new \Exception("Biplaceur n'a pas la certification requise pour l'option '{$option->name}': {$requiredCert}");
-                        }
+            // Vérifier compétences instructeur pour options requises
+            $reservation->load('options');
+            foreach ($reservation->options as $option) {
+                // Si l'option nécessite une certification (ex: photo, vidéo)
+                if (isset($option->metadata['requires_certification'])) {
+                    $requiredCert = $option->metadata['requires_certification'];
+                    $instructorCerts = $instructor->certifications ?? [];
+                    if (!in_array($requiredCert, $instructorCerts)) {
+                        throw new \Exception("L'instructeur n'a pas la certification requise pour l'option '{$option->name}': {$requiredCert}");
                     }
                 }
             }
@@ -422,31 +516,42 @@ class ReservationService
                 }
             }
 
+            // Gérer l'équipement via metadata si fourni
+            $equipmentId = $data['equipment_id'] ?? $data['tandem_glider_id'] ?? null;
+            $metadata = $reservation->metadata ?? [];
+            if ($equipmentId) {
+                $metadata['equipment_id'] = $equipmentId;
+            }
+
             $oldValues = [
                 'scheduled_at' => $reservation->scheduled_at?->toDateTimeString(),
-                'biplaceur_id' => $reservation->biplaceur_id,
+                'instructor_id' => $reservation->instructor_id,
                 'site_id' => $reservation->site_id,
             ];
 
             $reservation->update([
                 'scheduled_at' => $scheduledAt,
                 'scheduled_time' => $scheduledAt->format('H:i:s'),
-                'biplaceur_id' => $data['biplaceur_id'],
+                'instructor_id' => $instructorId,
                 'site_id' => $data['site_id'] ?? null,
-                'tandem_glider_id' => $data['tandem_glider_id'] ?? null,
                 'vehicle_id' => $data['vehicle_id'] ?? null,
+                'metadata' => $metadata,
                 'status' => 'scheduled',
             ]);
 
-            // Mettre à jour aussi instructor_id pour compatibilité
-            $biplaceur = \App\Models\Biplaceur::find($data['biplaceur_id']);
-            if ($biplaceur) {
-                $reservation->update(['instructor_id' => $biplaceur->user_id]);
+            // Créer/mettre à jour les ActivitySession avec l'instructeur
+            $reservation->load('activitySessions');
+            foreach ($reservation->activitySessions as $session) {
+                $session->update([
+                    'instructor_id' => $instructorId,
+                    'scheduled_at' => $scheduledAt,
+                    'site_id' => $data['site_id'] ?? null,
+                ]);
             }
 
             $newValues = [
                 'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
-                'biplaceur_id' => $data['biplaceur_id'],
+                'instructor_id' => $instructorId,
                 'site_id' => $data['site_id'] ?? null,
             ];
 
