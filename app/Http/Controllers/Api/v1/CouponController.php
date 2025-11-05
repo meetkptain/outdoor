@@ -50,6 +50,11 @@ class CouponController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        // Support rétrocompatibilité : convertir applicable_flight_types en applicable_activity_types
+        if (!empty($validated['applicable_flight_types']) && empty($validated['applicable_activity_types'])) {
+            $validated['applicable_activity_types'] = $validated['applicable_flight_types'];
+        }
+        
         $coupon = Coupon::create($validated);
 
         return response()->json([
@@ -83,6 +88,11 @@ class CouponController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        // Support rétrocompatibilité : convertir applicable_flight_types en applicable_activity_types
+        if (!empty($validated['applicable_flight_types']) && empty($validated['applicable_activity_types'])) {
+            $validated['applicable_activity_types'] = $validated['applicable_flight_types'];
+        }
+        
         $coupon->update($validated);
 
         return response()->json([

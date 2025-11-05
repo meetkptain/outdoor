@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
 use App\Models\Payment;
+use App\Models\Instructor;
 use App\Services\PaymentService;
 use App\Services\StripeTerminalService;
 use Illuminate\Http\Request;
@@ -91,17 +92,28 @@ class PaymentController extends Controller
 
             // Vérifier que l'utilisateur a le droit de capturer
             $user = $request->user();
-            if (!$user->isAdmin() && !$user->isBiplaceur()) {
+            $organization = $user->getCurrentOrganization();
+            $instructor = $organization ? $user->getInstructorForOrganization($organization) : null;
+            $isInstructor = $instructor !== null;
+            
+            if (!$user->isAdmin() && !$isInstructor && !$user->isBiplaceur()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Accès non autorisé',
                 ], 403);
             }
 
-            // Si biplaceur, vérifier que c'est son vol
-            if ($user->isBiplaceur()) {
-                $biplaceur = $user->biplaceur;
-                if ($biplaceur && $payment->reservation->biplaceur_id !== $biplaceur->id) {
+            // Si instructeur, vérifier que c'est sa réservation
+            if ($isInstructor && $payment->reservation->instructor_id !== $instructor->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ce paiement ne vous appartient pas',
+                ], 403);
+            }
+            
+            // Rétrocompatibilité : si biplaceur (sans instructor), vérifier biplaceur_id
+            if (!$isInstructor && $user->isBiplaceur() && $user->biplaceur) {
+                if ($payment->reservation->instructor_id !== $user->biplaceur->instructor_id) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Ce paiement ne vous appartient pas',
@@ -197,15 +209,30 @@ class PaymentController extends Controller
     {
         try {
             $user = $request->user();
+            $organization = $user->getCurrentOrganization();
+            $instructor = $organization ? $user->getInstructorForOrganization($organization) : null;
 
-            if (!$user->isBiplaceur() || !$user->biplaceur) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé',
-                ], 403);
+            if (!$instructor) {
+                // Rétrocompatibilité : vérifier si biplaceur
+                if (!$user->isBiplaceur() || !$user->biplaceur) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès non autorisé - Instructeur non trouvé',
+                    ], 403);
+                }
+                // Si biplaceur, utiliser instructor_id du biplaceur
+                $biplaceur = $user->biplaceur;
+                if ($biplaceur->instructor_id) {
+                    $instructor = Instructor::find($biplaceur->instructor_id);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Biplaceur non migré vers Instructor',
+                    ], 400);
+                }
             }
 
-            $token = $this->terminalService->getConnectionToken($user->biplaceur->id);
+            $token = $this->terminalService->getConnectionToken($instructor->id);
 
             return response()->json([
                 'success' => true,
@@ -239,18 +266,33 @@ class PaymentController extends Controller
 
         try {
             $user = $request->user();
+            $organization = $user->getCurrentOrganization();
+            $instructor = $organization ? $user->getInstructorForOrganization($organization) : null;
 
-            if (!$user->isBiplaceur() || !$user->biplaceur) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé',
-                ], 403);
+            if (!$instructor) {
+                // Rétrocompatibilité : vérifier si biplaceur
+                if (!$user->isBiplaceur() || !$user->biplaceur) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès non autorisé - Instructeur non trouvé',
+                    ], 403);
+                }
+                // Si biplaceur, utiliser instructor_id du biplaceur
+                $biplaceur = $user->biplaceur;
+                if ($biplaceur->instructor_id) {
+                    $instructor = Instructor::find($biplaceur->instructor_id);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Biplaceur non migré vers Instructor',
+                    ], 400);
+                }
             }
 
             $reservation = Reservation::findOrFail($validated['reservation_id']);
 
-            // Vérifier que c'est le biplaceur assigné
-            if ($reservation->biplaceur_id !== $user->biplaceur->id) {
+            // Vérifier que c'est l'instructeur assigné
+            if ($reservation->instructor_id !== $instructor->id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cette réservation ne vous est pas assignée',
@@ -292,18 +334,33 @@ class PaymentController extends Controller
 
         try {
             $user = $request->user();
+            $organization = $user->getCurrentOrganization();
+            $instructor = $organization ? $user->getInstructorForOrganization($organization) : null;
 
-            if (!$user->isBiplaceur() || !$user->biplaceur) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé',
-                ], 403);
+            if (!$instructor) {
+                // Rétrocompatibilité : vérifier si biplaceur
+                if (!$user->isBiplaceur() || !$user->biplaceur) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès non autorisé - Instructeur non trouvé',
+                    ], 403);
+                }
+                // Si biplaceur, utiliser instructor_id du biplaceur
+                $biplaceur = $user->biplaceur;
+                if ($biplaceur->instructor_id) {
+                    $instructor = Instructor::find($biplaceur->instructor_id);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Biplaceur non migré vers Instructor',
+                    ], 400);
+                }
             }
 
             $reservation = Reservation::findOrFail($validated['reservation_id']);
 
-            // Vérifier que c'est le biplaceur assigné
-            if ($reservation->biplaceur_id !== $user->biplaceur->id) {
+            // Vérifier que c'est l'instructeur assigné
+            if ($reservation->instructor_id !== $instructor->id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cette réservation ne vous est pas assignée',

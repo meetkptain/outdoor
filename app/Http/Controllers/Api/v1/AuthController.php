@@ -118,11 +118,24 @@ class AuthController extends Controller
             ];
         }
 
-        if ($user->isBiplaceur() && $user->biplaceur) {
+        // Récupérer l'instructeur si l'utilisateur est instructeur
+        $organization = $user->getCurrentOrganization();
+        $instructor = $organization ? $user->getInstructorForOrganization($organization) : null;
+        if ($instructor) {
+            $response['data']['instructor'] = [
+                'id' => $instructor->id,
+                'license_number' => $instructor->license_number,
+                'can_tap_to_pay' => $instructor->metadata['can_tap_to_pay'] ?? false,
+                'activity_types' => $instructor->activity_types,
+            ];
+        }
+        
+        // Rétrocompatibilité : si l'utilisateur est biplaceur mais n'a pas d'instructor, utiliser biplaceur
+        if ($user->isBiplaceur() && $user->biplaceur && !$instructor) {
             $response['data']['biplaceur'] = [
                 'id' => $user->biplaceur->id,
                 'license_number' => $user->biplaceur->license_number,
-                'can_tap_to_pay' => $user->biplaceur->can_tap_to_pay,
+                'can_tap_to_pay' => $user->biplaceur->can_tap_to_pay ?? false,
             ];
         }
 
@@ -147,7 +160,7 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user()->load(['client', 'biplaceur']);
+        $user = $request->user()->load(['client']);
 
         $response = [
             'success' => true,
@@ -169,20 +182,37 @@ class AuthController extends Controller
                 'phone' => $user->client->phone,
                 'weight' => $user->client->weight,
                 'height' => $user->client->height,
-                'total_flights' => $user->client->total_flights,
+                'total_sessions' => $user->client->total_flights, // @deprecated - utiliser total_sessions
+                'total_flights' => $user->client->total_flights, // Rétrocompatibilité
                 'total_spent' => $user->client->total_spent,
-                'last_flight_date' => $user->client->last_flight_date,
+                'last_activity_date' => $user->client->last_flight_date, // @deprecated - utiliser last_activity_date
+                'last_flight_date' => $user->client->last_flight_date, // Rétrocompatibilité
             ];
         }
 
-        if ($user->isBiplaceur() && $user->biplaceur) {
+        // Récupérer l'instructeur si l'utilisateur est instructeur
+        $organization = $user->getCurrentOrganization();
+        $instructor = $organization ? $user->getInstructorForOrganization($organization) : null;
+        if ($instructor) {
+            $response['data']['instructor'] = [
+                'id' => $instructor->id,
+                'license_number' => $instructor->license_number,
+                'experience_years' => $instructor->experience_years,
+                'activity_types' => $instructor->activity_types,
+                'availability' => $instructor->availability,
+                'can_tap_to_pay' => $instructor->metadata['can_tap_to_pay'] ?? false,
+            ];
+        }
+        
+        // Rétrocompatibilité : si l'utilisateur est biplaceur mais n'a pas d'instructor, utiliser biplaceur
+        if ($user->isBiplaceur() && $user->biplaceur && !$instructor) {
             $response['data']['biplaceur'] = [
                 'id' => $user->biplaceur->id,
                 'license_number' => $user->biplaceur->license_number,
                 'experience_years' => $user->biplaceur->experience_years,
                 'total_flights' => $user->biplaceur->total_flights,
                 'availability' => $user->biplaceur->availability,
-                'can_tap_to_pay' => $user->biplaceur->can_tap_to_pay,
+                'can_tap_to_pay' => $user->biplaceur->can_tap_to_pay ?? false,
             ];
         }
 

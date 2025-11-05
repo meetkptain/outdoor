@@ -43,7 +43,7 @@ class ClientService
     public function getClientHistory(int $clientId): Collection
     {
         return Reservation::where('client_id', $clientId)
-            ->with(['biplaceur', 'site', 'options', 'payments'])
+            ->with(['instructor', 'activity', 'site', 'options', 'payments'])
             ->orderBy('created_at', 'desc')
             ->get();
     }

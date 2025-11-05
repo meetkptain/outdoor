@@ -34,8 +34,12 @@ class ReservationAdminController extends Controller
             $query->where('payment_status', $request->payment_status);
         }
 
-        if ($request->has('flight_type')) {
-            $query->where('flight_type', $request->flight_type);
+        // Support rétrocompatibilité : flight_type ou activity_type
+        if ($request->has('activity_type')) {
+            $query->where('activity_type', $request->activity_type);
+        } elseif ($request->has('flight_type')) {
+            // @deprecated - utiliser activity_type à la place
+            $query->where('activity_type', $request->flight_type);
         }
 
         if ($request->has('instructor_id')) {
@@ -76,11 +80,11 @@ class ReservationAdminController extends Controller
     {
         $reservation = Reservation::with([
             'instructor',
+            'activity',
             'site',
-            'tandemGlider',
             'vehicle',
             'options',
-            'flights',
+            'activitySessions',
             'payments',
             'history.user',
             'coupon',
@@ -94,7 +98,7 @@ class ReservationAdminController extends Controller
     }
 
     /**
-     * Planifier une réservation (assigner date et biplaceur)
+     * Planifier une réservation (assigner date et instructeur)
      */
     public function schedule(Request $request, int $id): JsonResponse
     {
@@ -103,11 +107,31 @@ class ReservationAdminController extends Controller
         $validated = $request->validate([
             'scheduled_at' => 'required|date|after:now',
             'scheduled_time' => 'nullable|date_format:H:i',
-            'biplaceur_id' => 'required|exists:biplaceurs,id',
+            'instructor_id' => 'required_without:biplaceur_id|exists:instructors,id',
+            'biplaceur_id' => 'required_without:instructor_id|exists:biplaceurs,id', // @deprecated
             'site_id' => 'nullable|exists:sites,id',
-            'tandem_glider_id' => 'nullable|exists:resources,id',
+            'equipment_id' => 'nullable|exists:resources,id', // Remplacer tandem_glider_id
+            'tandem_glider_id' => 'nullable|exists:resources,id', // @deprecated
             'vehicle_id' => 'nullable|exists:resources,id',
         ]);
+
+        // Support rétrocompatibilité : convertir biplaceur_id en instructor_id
+        $instructorId = $validated['instructor_id'] ?? null;
+        if (!$instructorId && !empty($validated['biplaceur_id'])) {
+            // Chercher l'instructor correspondant au biplaceur
+            $biplaceur = \App\Models\Biplaceur::find($validated['biplaceur_id']);
+            if ($biplaceur && $biplaceur->instructor_id) {
+                $instructorId = $biplaceur->instructor_id;
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Biplaceur non migré. Veuillez utiliser instructor_id.',
+                ], 400);
+            }
+        }
+
+        // Support rétrocompatibilité : equipment_id ou tandem_glider_id
+        $equipmentId = $validated['equipment_id'] ?? $validated['tandem_glider_id'] ?? null;
 
         try {
             $scheduledAt = \Carbon\Carbon::parse($validated['scheduled_at']);
@@ -118,16 +142,16 @@ class ReservationAdminController extends Controller
 
             $this->reservationService->scheduleReservation($reservation, [
                 'scheduled_at' => $scheduledAt,
-                'biplaceur_id' => $validated['biplaceur_id'],
+                'instructor_id' => $instructorId,
                 'site_id' => $validated['site_id'] ?? null,
-                'tandem_glider_id' => $validated['tandem_glider_id'] ?? null,
+                'equipment_id' => $equipmentId,
                 'vehicle_id' => $validated['vehicle_id'] ?? null,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Réservation planifiée avec succès',
-                'data' => $reservation->fresh()->load(['biplaceur', 'site', 'tandemGlider', 'vehicle']),
+                'data' => $reservation->fresh()->load(['instructor', 'activity', 'site', 'vehicle']),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -146,11 +170,15 @@ class ReservationAdminController extends Controller
 
         $validated = $request->validate([
             'scheduled_at' => 'required|date',
-            'instructor_id' => 'required|exists:users,id',
+            'instructor_id' => 'required|exists:instructors,id',
             'site_id' => 'nullable|exists:sites,id',
-            'tandem_glider_id' => 'nullable|exists:resources,id',
+            'equipment_id' => 'nullable|exists:resources,id',
+            'tandem_glider_id' => 'nullable|exists:resources,id', // @deprecated
             'vehicle_id' => 'nullable|exists:resources,id',
         ]);
+
+        // Support rétrocompatibilité : equipment_id ou tandem_glider_id
+        $equipmentId = $validated['equipment_id'] ?? $validated['tandem_glider_id'] ?? null;
 
         try {
             $this->reservationService->assignResources(
@@ -158,7 +186,7 @@ class ReservationAdminController extends Controller
                 new \DateTime($validated['scheduled_at']),
                 $validated['instructor_id'],
                 $validated['site_id'] ?? null,
-                $validated['tandem_glider_id'] ?? null,
+                $equipmentId,
                 $validated['vehicle_id'] ?? null
             );
 
@@ -185,7 +213,7 @@ class ReservationAdminController extends Controller
             'options' => 'required|array',
             'options.*.id' => 'required|exists:options,id',
             'options.*.quantity' => 'nullable|integer|min:1',
-            'stage' => 'nullable|in:before_flight,after_flight',
+            'stage' => 'nullable|string', // Stages dynamiques depuis workflow du module (before_flight/after_flight acceptés pour rétrocompatibilité)
         ]);
 
         try {

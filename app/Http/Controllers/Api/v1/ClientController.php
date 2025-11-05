@@ -67,9 +67,11 @@ class ClientController extends Controller
                 'height' => $client->height,
                 'medical_notes' => $client->medical_notes,
                 'notes' => $client->notes,
-                'total_flights' => $client->total_flights,
+                'total_sessions' => $client->total_flights, // @deprecated - utiliser total_sessions
+                'total_flights' => $client->total_flights, // Rétrocompatibilité
                 'total_spent' => $client->total_spent,
-                'last_flight_date' => $client->last_flight_date,
+                'last_activity_date' => $client->last_flight_date, // @deprecated - utiliser last_activity_date
+                'last_flight_date' => $client->last_flight_date, // Rétrocompatibilité
                 'is_active' => $client->is_active,
             ],
         ]);

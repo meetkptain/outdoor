@@ -75,7 +75,23 @@ class DashboardController extends Controller
     }
 
     /**
-     * Statistiques des vols
+     * Statistiques des activités (sessions)
+     */
+    public function activityStats(Request $request)
+    {
+        $period = $request->get('period', 'month');
+        $activityType = $request->get('activity_type');
+
+        $stats = $this->dashboardService->getActivityStats($period, $activityType);
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats,
+        ]);
+    }
+
+    /**
+     * @deprecated Utiliser activityStats() à la place
      */
     public function flightStats(Request $request)
     {
@@ -90,7 +106,24 @@ class DashboardController extends Controller
     }
 
     /**
-     * Top biplaceurs
+     * Top instructeurs
+     */
+    public function topInstructors(Request $request)
+    {
+        $limit = $request->get('limit', 10);
+        $period = $request->get('period', 'month');
+        $activityType = $request->get('activity_type');
+
+        $topInstructors = $this->dashboardService->getTopInstructors($limit, $period, $activityType);
+
+        return response()->json([
+            'success' => true,
+            'data' => $topInstructors,
+        ]);
+    }
+
+    /**
+     * @deprecated Utiliser topInstructors() à la place
      */
     public function topBiplaceurs(Request $request)
     {

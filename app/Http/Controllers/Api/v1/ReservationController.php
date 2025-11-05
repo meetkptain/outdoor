@@ -29,7 +29,9 @@ class ReservationController extends Controller
             'customer_last_name' => 'required|string|max:255',
             'customer_birth_date' => 'nullable|date',
             'customer_weight' => 'nullable|integer|min:30|max:150',
-            'flight_type' => 'required|in:tandem,biplace,initiation,perfectionnement,autonome',
+            'customer_height' => 'nullable|integer|min:100|max:250',
+            'activity_id' => 'required_without:flight_type|exists:activities,id',
+            'flight_type' => 'required_without:activity_id|in:tandem,biplace,initiation,perfectionnement,autonome', // @deprecated - utiliser activity_id
             'participants_count' => 'required|integer|min:1|max:10',
             'participants' => 'nullable|array',
             'participants.*.first_name' => 'nullable|string',
@@ -45,6 +47,27 @@ class ReservationController extends Controller
             'payment_type' => 'nullable|in:deposit,authorization,both',
             'payment_method_id' => 'required|string', // Stripe PaymentMethod ID
         ]);
+
+        // Support rétrocompatibilité : convertir flight_type en activity_id si nécessaire
+        if (empty($validated['activity_id']) && !empty($validated['flight_type'])) {
+            // Chercher l'activité paragliding par défaut
+            $organization = $request->user()?->getCurrentOrganization() ?? \App\Models\Organization::first();
+            $activity = \App\Models\Activity::where('organization_id', $organization->id ?? null)
+                ->where('activity_type', 'paragliding')
+                ->first();
+            
+            if (!$activity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Activité paragliding non trouvée. Veuillez utiliser activity_id.',
+                ], 400);
+            }
+            
+            $validated['activity_id'] = $activity->id;
+            $validated['metadata'] = [
+                'original_flight_type' => $validated['flight_type'],
+            ];
+        }
 
         try {
             $reservation = $this->reservationService->createReservation($validated);
@@ -66,7 +89,7 @@ class ReservationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'reservation' => $reservation->load(['options', 'flights']),
+                    'reservation' => $reservation->load(['options', 'activitySessions', 'activity']),
                     'payment' => [
                         'status' => $payment->status,
                         'client_secret' => $payment->stripe_data['client_secret'] ?? null,
@@ -87,7 +110,7 @@ class ReservationController extends Controller
     public function show(string $uuid): JsonResponse
     {
         $reservation = Reservation::where('uuid', $uuid)
-            ->with(['options', 'flights', 'site', 'instructor', 'payments'])
+            ->with(['options', 'activitySessions', 'activity', 'site', 'instructor', 'payments'])
             ->firstOrFail();
 
         return response()->json([
@@ -205,7 +228,7 @@ class ReservationController extends Controller
 
         $query = Reservation::where('user_id', $user->id)
             ->orWhere('client_id', $user->client?->id)
-            ->with(['biplaceur', 'site', 'options', 'payments']);
+            ->with(['instructor', 'activity', 'site', 'options', 'payments']);
 
         $reservations = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
@@ -235,7 +258,7 @@ class ReservationController extends Controller
                 $query->where('user_id', $user->id)
                       ->orWhere('client_id', $user->client?->id);
             })
-            ->with(['biplaceur', 'site', 'options', 'payments', 'signature'])
+            ->with(['instructor', 'activity', 'site', 'options', 'payments', 'signature'])
             ->firstOrFail();
 
         return response()->json([
@@ -290,7 +313,7 @@ class ReservationController extends Controller
             }
 
             // Recalculer le total avec le coupon
-            $discount = $coupon->calculateDiscount($reservation->total_amount, $reservation->flight_type);
+            $discount = $coupon->calculateDiscount($reservation->total_amount, $reservation->activity_type);
             $reservation->update([
                 'coupon_id' => $coupon->id,
                 'coupon_code' => $coupon->code,
