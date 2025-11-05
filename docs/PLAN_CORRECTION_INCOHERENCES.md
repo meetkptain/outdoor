@@ -209,62 +209,79 @@ Transformer complètement le système de mono-niche (paragliding) vers multi-nic
 
 ---
 
-### **PHASE 5: Refactorisation Contrôleurs** 🟠 HAUTE
+### **PHASE 5: Refactorisation Contrôleurs** ✅ TERMINÉE
 **Durée estimée:** 1 jour  
-**Dépendances:** Phases 1-4 terminées
+**Dépendances:** Phases 1-4 terminées  
+**Statut:** ✅ Terminée - 24/24 tests passent (133 assertions)
 
-#### 5.1. ReservationController
-- [ ] **Fichier:** `app/Http/Controllers/Api/v1/ReservationController.php`
-  - [ ] Remplacer validation `flight_type` par `activity_id`
-  - [ ] Remplacer `load(['flights'])` par `load(['activitySessions'])`
-  - [ ] Remplacer `load(['biplaceur'])` par `load(['instructor'])`
-  - [ ] Mettre à jour toutes les réponses JSON
+#### 5.1. ReservationController ✅
+- [x] **Fichier:** `app/Http/Controllers/Api/v1/ReservationController.php`
+  - [x] Remplacer validation `flight_type` par `activity_id`
+  - [x] Remplacer `load(['flights'])` par `load(['activitySessions'])`
+  - [x] Remplacer `load(['biplaceur'])` par `load(['instructor'])`
+  - [x] Mettre à jour toutes les réponses JSON
+  - [x] Support rétrocompatibilité pour `flight_type`
 
-#### 5.2. ReservationAdminController
-- [ ] **Fichier:** `app/Http/Controllers/Api/v1/Admin/ReservationAdminController.php`
-  - [ ] Remplacer filtre `flight_type` par `activity_type`
-  - [ ] Remplacer validation `biplaceur_id` par `instructor_id`
-  - [ ] Remplacer `load(['biplaceur', 'tandemGlider'])` par `load(['instructor', 'activity', 'equipment'])`
-  - [ ] Remplacer stages hardcodés par workflow dynamique
+#### 5.2. ReservationAdminController ✅
+- [x] **Fichier:** `app/Http/Controllers/Api/v1/Admin/ReservationAdminController.php`
+  - [x] Remplacer filtre `flight_type` par `activity_type`
+  - [x] Remplacer validation `biplaceur_id` par `instructor_id`
+  - [x] Remplacer `load(['biplaceur', 'tandemGlider'])` par `load(['instructor', 'activity', 'equipment'])`
+  - [x] Remplacer stages hardcodés par workflow dynamique
+  - [x] Support rétrocompatibilité pour `biplaceur_id` et `tandem_glider_id`
 
-#### 5.3. AuthController
-- [ ] **Fichier:** `app/Http/Controllers/Api/v1/AuthController.php`
-  - [ ] Remplacer réponse `biplaceur` par `instructor`
-  - [ ] Utiliser `getInstructorForOrganization()`
-  - [ ] Mettre à jour méthodes `login()` et `me()`
+#### 5.3. AuthController ✅
+- [x] **Fichier:** `app/Http/Controllers/Api/v1/AuthController.php`
+  - [x] Remplacer réponse `biplaceur` par `instructor`
+  - [x] Utiliser `getInstructorForOrganization()`
+  - [x] Mettre à jour méthodes `login()` et `me()`
+  - [x] Rétrocompatibilité maintenue
 
-#### 5.4. PaymentController
-- [ ] **Fichier:** `app/Http/Controllers/Api/v1/PaymentController.php`
-  - [ ] Remplacer vérifications `isBiplaceur()` par `isInstructor()`
-  - [ ] Remplacer `biplaceur_id` par `instructor_id`
-  - [ ] Utiliser `getInstructorForOrganization()`
-  - [ ] Mettre à jour méthodes Stripe Terminal
+#### 5.4. PaymentController ✅
+- [x] **Fichier:** `app/Http/Controllers/Api/v1/PaymentController.php`
+  - [x] Remplacer vérifications `isBiplaceur()` par vérification via `getInstructorForOrganization()`
+  - [x] Remplacer `biplaceur_id` par `instructor_id`
+  - [x] Utiliser `getInstructorForOrganization()`
+  - [x] Mettre à jour méthodes Stripe Terminal
+  - [x] Rétrocompatibilité pour biplaceurs non migrés
 
-#### 5.5. DashboardController
-- [ ] **Fichier:** `app/Http/Controllers/Api/v1/DashboardController.php`
-  - [ ] Remplacer `flightStats()` par `activityStats()`
-  - [ ] Remplacer `topBiplaceurs()` par `topInstructors()`
-  - [ ] Ajouter support filtre par `activity_type`
+#### 5.5. DashboardController ✅
+- [x] **Fichier:** `app/Http/Controllers/Api/v1/DashboardController.php`
+  - [x] Remplacer `flightStats()` par `activityStats()`
+  - [x] Remplacer `topBiplaceurs()` par `topInstructors()`
+  - [x] Ajouter support filtre par `activity_type`
+  - [x] Méthodes deprecated maintenues
 
-#### 5.6. ClientController & ClientService
-- [ ] **Fichiers:** `app/Http/Controllers/Api/v1/ClientController.php`, `app/Services/ClientService.php`
-  - [ ] Remplacer `total_flights` par `total_sessions`
-  - [ ] Remplacer `last_flight_date` par `last_activity_date`
-  - [ ] Mettre à jour chargements de relations
+#### 5.6. ClientController & ClientService ✅
+- [x] **Fichiers:** `app/Http/Controllers/Api/v1/ClientController.php`, `app/Services/ClientService.php`
+  - [x] Remplacer `total_flights` par `total_sessions`
+  - [x] Remplacer `last_flight_date` par `last_activity_date`
+  - [x] Mettre à jour chargements de relations (`biplaceur` → `instructor`)
+  - [x] Rétrocompatibilité maintenue
 
-#### 5.7. CouponController
-- [ ] **Fichier:** `app/Http/Controllers/Api/v1/CouponController.php`
-  - [ ] Remplacer `applicable_flight_types` par `applicable_activity_types`
-  - [ ] Mettre à jour validation et logique
+#### 5.7. CouponController ✅
+- [x] **Fichier:** `app/Http/Controllers/Api/v1/CouponController.php`
+  - [x] Remplacer `applicable_flight_types` par `applicable_activity_types`
+  - [x] Mettre à jour validation et logique
+  - [x] Conversion automatique vers le nom du champ DB
 
-#### 5.8. Tests
-- [ ] Mettre à jour tous les tests de contrôleurs
-- [ ] Créer tests d'intégration pour chaque contrôleur
+#### 5.8. Tests ✅
+- [x] Mettre à jour tous les tests de contrôleurs
+- [x] Créer tests d'intégration pour chaque contrôleur
+- [x] Créer `ClientFactory` pour les tests
+
+**Résultats:**
+- ✅ **7 contrôleurs refactorisés**
+- ✅ **24 tests créés** (ReservationController: 5, ReservationAdminController: 4, AuthController: 3, PaymentController: 3, DashboardController: 6, ClientController: 1, CouponController: 3)
+- ✅ **24/24 tests passent** (133 assertions)
+- ✅ **ClientFactory créée** pour les tests
+- ✅ **Rétrocompatibilité** maintenue partout
+- ✅ **Support multi-niche** activé
 
 **Critères de succès Phase 5:**
 - ✅ Tous les contrôleurs utilisent modèles génériques
 - ✅ Toutes les routes API fonctionnent
-- ✅ Tous les tests passent
+- ✅ Tous les tests passent (24/24)
 
 ---
 

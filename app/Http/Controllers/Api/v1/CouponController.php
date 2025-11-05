@@ -45,14 +45,16 @@ class CouponController extends Controller
             'valid_until' => 'nullable|date|after:valid_from',
             'usage_limit' => 'nullable|integer|min:1',
             'usage_limit_per_user' => 'nullable|integer|min:1',
-            'applicable_flight_types' => 'nullable|array',
+            'applicable_flight_types' => 'nullable|array', // @deprecated
+            'applicable_activity_types' => 'nullable|array', // Nouveau nom
             'is_first_time_only' => 'boolean',
             'is_active' => 'boolean',
         ]);
 
-        // Support rétrocompatibilité : convertir applicable_flight_types en applicable_activity_types
-        if (!empty($validated['applicable_flight_types']) && empty($validated['applicable_activity_types'])) {
-            $validated['applicable_activity_types'] = $validated['applicable_flight_types'];
+        // Support rétrocompatibilité : convertir applicable_activity_types en applicable_flight_types (nom du champ DB)
+        if (!empty($validated['applicable_activity_types']) && empty($validated['applicable_flight_types'])) {
+            $validated['applicable_flight_types'] = $validated['applicable_activity_types'];
+            unset($validated['applicable_activity_types']); // Ne pas essayer de créer ce champ qui n'existe pas en DB
         }
         
         $coupon = Coupon::create($validated);
@@ -83,14 +85,16 @@ class CouponController extends Controller
             'valid_until' => 'nullable|date|after:valid_from',
             'usage_limit' => 'nullable|integer|min:1',
             'usage_limit_per_user' => 'nullable|integer|min:1',
-            'applicable_flight_types' => 'nullable|array',
+            'applicable_flight_types' => 'nullable|array', // @deprecated
+            'applicable_activity_types' => 'nullable|array', // Nouveau nom
             'is_first_time_only' => 'boolean',
             'is_active' => 'boolean',
         ]);
 
-        // Support rétrocompatibilité : convertir applicable_flight_types en applicable_activity_types
-        if (!empty($validated['applicable_flight_types']) && empty($validated['applicable_activity_types'])) {
-            $validated['applicable_activity_types'] = $validated['applicable_flight_types'];
+        // Support rétrocompatibilité : convertir applicable_activity_types en applicable_flight_types (nom du champ DB)
+        if (!empty($validated['applicable_activity_types']) && empty($validated['applicable_flight_types'])) {
+            $validated['applicable_flight_types'] = $validated['applicable_activity_types'];
+            unset($validated['applicable_activity_types']); // Ne pas essayer de mettre à jour ce champ qui n'existe pas en DB
         }
         
         $coupon->update($validated);

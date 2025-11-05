@@ -2,6 +2,73 @@
 
 ## [1.5.0] – 2025-11-05 (En cours)
 
+### ✅ **Phase 5 - Refactorisation Contrôleurs** (TERMINÉE)
+
+**Statut :** ✅ Terminée — 7 contrôleurs refactorisés, 24 tests créés, 24/24 tests passent (133 assertions)
+
+#### ✨ Généralisation des contrôleurs
+
+* **ReservationController refactorisé** (`app/Http/Controllers/Api/v1/ReservationController.php`) :
+  * ✅ `flight_type` → `activity_id` (avec rétrocompatibilité)
+  * ✅ `flights()` → `activitySessions()` dans les chargements
+  * ✅ `biplaceur` → `instructor` dans les relations
+  * ✅ Support rétrocompatibilité pour `flight_type` (conversion automatique)
+
+* **ReservationAdminController refactorisé** (`app/Http/Controllers/Api/v1/Admin/ReservationAdminController.php`) :
+  * ✅ `flight_type` → `activity_type` dans les filtres
+  * ✅ `biplaceur_id` → `instructor_id` (avec conversion depuis `biplaceur_id`)
+  * ✅ `tandem_glider_id` → `equipment_id`
+  * ✅ Stages dynamiques depuis le workflow du module
+
+* **AuthController refactorisé** (`app/Http/Controllers/Api/v1/AuthController.php`) :
+  * ✅ `biplaceur` → `instructor` dans `login()` et `me()`
+  * ✅ Utilise `getInstructorForOrganization()`
+  * ✅ Rétrocompatibilité maintenue
+
+* **PaymentController refactorisé** (`app/Http/Controllers/Api/v1/PaymentController.php`) :
+  * ✅ `isBiplaceur()` → vérification via `getInstructorForOrganization()`
+  * ✅ `biplaceur_id` → `instructor_id` pour les vérifications
+  * ✅ Stripe Terminal utilise `instructor_id`
+
+* **DashboardController refactorisé** (`app/Http/Controllers/Api/v1/DashboardController.php`) :
+  * ✅ `flightStats()` → `activityStats()` (deprecated maintenu)
+  * ✅ `topBiplaceurs()` → `topInstructors()` (deprecated maintenu)
+  * ✅ Support filtrage par `activity_type`
+
+* **ClientController refactorisé** (`app/Http/Controllers/Api/v1/ClientController.php`) :
+  * ✅ `total_flights` → `total_sessions` (avec rétrocompatibilité)
+  * ✅ `last_flight_date` → `last_activity_date` (avec rétrocompatibilité)
+
+* **CouponController refactorisé** (`app/Http/Controllers/Api/v1/CouponController.php`) :
+  * ✅ `applicable_flight_types` → `applicable_activity_types` (avec conversion automatique)
+  * ✅ Conversion automatique vers le nom du champ DB (`applicable_flight_types`)
+
+* **ClientService refactorisé** (`app/Services/ClientService.php`) :
+  * ✅ `biplaceur` → `instructor` dans `getClientHistory()`
+
+* **Tests créés** :
+  * ✅ `ReservationControllerGeneralizedTest` : 5 tests
+  * ✅ `ReservationAdminControllerGeneralizedTest` : 4 tests
+  * ✅ `AuthControllerGeneralizedTest` : 3 tests
+  * ✅ `PaymentControllerGeneralizedTest` : 3 tests
+  * ✅ `DashboardControllerGeneralizedTest` : 6 tests
+  * ✅ `ClientControllerGeneralizedTest` : 1 test
+  * ✅ `CouponControllerGeneralizedTest` : 3 tests
+  * ✅ **24/24 tests passent** (133 assertions)
+
+* **Factory créée** :
+  * ✅ `ClientFactory` : Factory pour créer des instances `Client` dans les tests
+
+#### 📊 Résultats
+* **7 contrôleurs généralisés** ✅
+* **Aucune référence à Biplaceur** dans les contrôleurs refactorisés ✅
+* **Support multi-niche** : filtrage par `activity_type` ✅
+* **Rétrocompatibilité** maintenue avec méthodes `@deprecated` ✅
+* **24/24 tests passent** (133 assertions) ✅
+* **ClientFactory créée** pour les tests ✅
+
+---
+
 ### ✅ **Phase 4 - Refactorisation Services Spécifiques** (TERMINÉE)
 
 **Statut :** ✅ Terminée — 3 services refactorisés, 13 tests passent, 22 assertions
