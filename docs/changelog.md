@@ -2,6 +2,46 @@
 
 ## [1.5.0] – 2025-11-05 (En cours)
 
+### ✅ **Phase 3 - Création InstructorService** (TERMINÉE)
+
+**Statut :** ✅ Terminée — InstructorService créé, 8 tests créés, 21 assertions, tous les tests passent
+
+#### ✨ Généralisation du service instructeur
+
+* **InstructorService créé** (`app/Services/InstructorService.php`) :
+  * ✅ `getSessionsToday()` : Récupère les sessions du jour pour un instructeur
+  * ✅ `getCalendar()` : Récupère le calendrier d'un instructeur sur une plage de dates
+  * ✅ `updateAvailability()` : Met à jour les disponibilités d'un instructeur
+  * ✅ `markSessionDone()` : Marque une session comme complétée
+  * ✅ `rescheduleSession()` : Reporte une session (instructeur)
+  * ✅ `isAvailable()` : Vérifie la disponibilité d'un instructeur pour une date/heure
+  * ✅ `getStats()` : Récupère les statistiques d'un instructeur
+  * ✅ `getUpcomingSessions()` : Récupère les sessions à venir pour un instructeur
+
+* **Adaptation depuis BiplaceurService** :
+  * ✅ Utilise `Instructor` au lieu de `Biplaceur`
+  * ✅ Utilise `ActivitySession` au lieu de `Reservation->where('biplaceur_id')`
+  * ✅ Gère les sessions d'activité au lieu des réservations directement
+  * ✅ Support multi-niche (filtre par `activity_type` dans les stats)
+
+* **Tests créés** (`tests/Feature/InstructorServiceTest.php`) :
+  * ✅ Test `getSessionsToday()` - Récupération sessions du jour
+  * ✅ Test `getCalendar()` - Récupération calendrier sur plage de dates
+  * ✅ Test `updateAvailability()` - Mise à jour disponibilités
+  * ✅ Test `markSessionDone()` - Marquage session complétée
+  * ✅ Test `rescheduleSession()` - Report de session
+  * ✅ Test `isAvailable()` - Vérification disponibilité
+  * ✅ Test `getStats()` - Statistiques instructeur
+  * ✅ Test `getUpcomingSessions()` - Sessions à venir
+
+#### 📊 Résultats
+* **8/8 tests passent** ✅
+* **21 assertions** validées
+* **InstructorService** prêt à remplacer `BiplaceurService`
+* **Support multi-niche** : fonctionne avec n'importe quelle activité
+
+---
+
 ### ✅ **Phase 2 - Refactorisation ReservationService** (TERMINÉE)
 
 **Statut :** ✅ Terminée — ReservationService généralisé, tests mis à jour, 4/4 tests de validation passent
@@ -90,7 +130,7 @@
 
 ### 📋 **Analyse et Plan de Correction - Généralisation**
 
-**Statut :** 🔄 En cours - Phase 1 et Phase 2 terminées, Phase 3 à démarrer
+**Statut :** 🔄 En cours - Phases 1, 2 et 3 terminées, Phase 4 à démarrer
 
 #### 📄 Documentation créée
 * **Analyse des incohérences** : `docs/INCOHERENCES_GENERALISATION.md`
@@ -105,15 +145,16 @@
 #### 🔍 Incohérences identifiées
 * ✅ Modèle `Reservation` - **GÉNÉRALISÉ** (Phase 1 terminée)
 * ✅ **ReservationService** - **GÉNÉRALISÉ** (Phase 2 terminée)
-* ⚠️ Services spécifiques (BiplaceurService, etc.) - Phase 3
+* ✅ **InstructorService** - **CRÉÉ** (Phase 3 terminée)
+* ⚠️ Services spécifiques (StripeTerminalService, VehicleService, DashboardService) - Phase 4
 * ⚠️ Contrôleurs avec logique mixte - Phase 5
 * ⚠️ Routes API dupliquées - Phase 6
 
 #### 📋 Prochaines étapes
 * ✅ Phase 1: Migration du modèle Reservation (1 jour) - **TERMINÉE**
 * ✅ Phase 2: Refactorisation ReservationService (1.5 jours) - **TERMINÉE**
-* ⏳ Phase 3: Création InstructorService (0.5 jour) - **À DÉMARRER**
-* ⏳ Phase 4: Refactorisation services spécifiques (1 jour)
+* ✅ Phase 3: Création InstructorService (0.5 jour) - **TERMINÉE**
+* ⏳ Phase 4: Refactorisation services spécifiques (1 jour) - **À DÉMARRER**
 * ⏳ Phase 5: Refactorisation contrôleurs (1 jour)
 * ⏳ Phase 6: Nettoyage et routes (0.5 jour)
 
