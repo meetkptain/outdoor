@@ -2,6 +2,65 @@
 
 ## [1.5.0] – 2025-11-05 (En cours)
 
+### ✅ **Phase 6 - Nettoyage et Routes** (TERMINÉE)
+
+**Statut :** ✅ Terminée — Routes nettoyées, code obsolète supprimé/marqué deprecated, documentation créée
+
+#### ✨ Nettoyage des routes API
+
+* **Routes `/biplaceurs` ajoutées comme alias** (`routes/api.php`) :
+  * ✅ Routes `/biplaceurs` redirigent vers `InstructorController` avec `activity_type=paragliding`
+  * ✅ Toutes les méthodes de `BiplaceurController` redirigent vers les équivalents génériques
+  * ✅ Routes `/biplaceurs/me/flights` → `/instructors/me/sessions`
+  * ✅ Routes `/biplaceurs/me/flights/today` → `/instructors/me/sessions/today`
+  * ✅ Routes `/biplaceurs/{id}/calendar` → `/instructors/{id}/calendar`
+  * ✅ Commentaires `@deprecated` ajoutés sur toutes les routes obsolètes
+
+* **Routes dashboard marquées deprecated** :
+  * ✅ `/admin/dashboard/flights` → `/admin/dashboard/activity-stats` (alias)
+  * ✅ `/admin/dashboard/top-biplaceurs` → `/admin/dashboard/top-instructors?activity_type=paragliding` (alias)
+
+#### 🗑️ Suppression code obsolète
+
+* **BiplaceurService supprimé** :
+  * ✅ `app/Services/BiplaceurService.php` supprimé (remplacé par `InstructorService`)
+  * ✅ Plus aucune référence à `BiplaceurService` dans le code
+
+* **BiplaceurController transformé en alias** :
+  * ✅ `app/Http/Controllers/Api/v1/BiplaceurController.php` transformé en alias vers `InstructorController`
+  * ✅ Toutes les méthodes redirigent vers les équivalents génériques
+  * ✅ Commentaires `@deprecated` ajoutés sur la classe et toutes les méthodes
+  * ✅ Injection de `InstructorService` et `InstructorController` pour délégation
+
+#### 📝 Modèle User
+
+* **Méthodes deprecated marquées** (`app/Models/User.php`) :
+  * ✅ `biplaceur()` relation conservée avec `@deprecated`
+  * ✅ `isBiplaceur()` méthode conservée avec `@deprecated`
+  * ✅ `scopeBiplaceurs()` conservé avec `@deprecated`
+  * ✅ `instructor()` et `getInstructorForOrganization()` fonctionnent correctement
+
+#### 📚 Documentation
+
+* **Guide de migration créé** :
+  * ✅ `docs/GUIDE_MIGRATION_MULTI_NICHE.md` créé avec guide complet
+  * ✅ Exemples de migration de code (avant/après)
+  * ✅ Exemples de migration API (endpoints deprecated → nouveaux)
+  * ✅ FAQ sur la migration
+  * ✅ Instructions pour ajouter de nouvelles activités
+
+* **Routes API documentées** :
+  * ✅ Commentaires `@deprecated` ajoutés dans `routes/api.php`
+  * ✅ Plan de correction mis à jour avec statut Phase 6
+
+#### 📊 Résultats
+* **Routes propres** : Nouveaux endpoints génériques + alias deprecated pour rétrocompatibilité ✅
+* **Code obsolète** : `BiplaceurService` supprimé, `BiplaceurController` transformé en alias ✅
+* **Documentation** : Guide de migration créé, routes documentées ✅
+* **Rétrocompatibilité** : Toutes les anciennes routes fonctionnent encore ✅
+
+---
+
 ### ✅ **Phase 5 - Refactorisation Contrôleurs** (TERMINÉE)
 
 **Statut :** ✅ Terminée — 7 contrôleurs refactorisés, 24 tests créés, 24/24 tests passent (133 assertions)

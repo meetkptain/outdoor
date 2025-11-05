@@ -54,6 +54,10 @@ class User extends Authenticatable
         return $this->hasOne(Client::class);
     }
 
+    /**
+     * @deprecated Utilisez instructor() ou getInstructorForOrganization() à la place.
+     * Cette relation est conservée uniquement pour rétrocompatibilité.
+     */
     public function biplaceur(): HasOne
     {
         return $this->hasOne(Biplaceur::class);
@@ -70,6 +74,9 @@ class User extends Authenticatable
         return $query->where('role', 'admin');
     }
 
+    /**
+     * @deprecated Utilisez Instructor::whereHas('user') avec un filtre par activity_type à la place.
+     */
     public function scopeBiplaceurs($query)
     {
         return $query->where('role', 'biplaceur');
@@ -86,6 +93,10 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    /**
+     * @deprecated Utilisez getInstructorForOrganization() pour vérifier si l'utilisateur est instructeur.
+     * Cette méthode est conservée uniquement pour rétrocompatibilité.
+     */
     public function isBiplaceur(): bool
     {
         return $this->role === 'biplaceur';

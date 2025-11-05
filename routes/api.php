@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\v1\AuthController;
 use App\Http\Controllers\Api\v1\ReservationController;
 use App\Http\Controllers\Api\v1\PaymentController;
-use App\Http\Controllers\Api\v1\BiplaceurController;
+use App\Http\Controllers\Api\v1\BiplaceurController; // @deprecated - Utilisez InstructorController
 use App\Http\Controllers\Api\v1\InstructorController;
 use App\Http\Controllers\Api\v1\ActivityController;
 use App\Http\Controllers\Api\v1\ActivitySessionController;
@@ -59,10 +59,11 @@ Route::prefix('v1')->group(function () {
     // ==================== PAIEMENTS ====================
     Route::prefix('payments')->group(function () {
         Route::post('/intent', [PaymentController::class, 'createIntent']);
-        Route::post('/capture', [PaymentController::class, 'capture'])->middleware(['auth:sanctum', 'role:admin,instructor,biplaceur']);
+        Route::post('/capture', [PaymentController::class, 'capture'])->middleware(['auth:sanctum', 'role:admin,instructor,biplaceur']); // 'biplaceur' pour rétrocompatibilité
         Route::post('/refund', [PaymentController::class, 'refund'])->middleware(['auth:sanctum', 'role:admin']);
         
         // Stripe Terminal & QR Code (Instructeurs)
+        // Note: 'biplaceur' dans le middleware pour rétrocompatibilité
         Route::middleware(['auth:sanctum', 'role:instructor,biplaceur'])->group(function () {
             Route::post('/terminal/connection-token', [PaymentController::class, 'getTerminalConnectionToken']);
             Route::post('/terminal/payment-intent', [PaymentController::class, 'createTerminalPaymentIntent']);
@@ -77,6 +78,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/by-activity/{activity_type}', [InstructorController::class, 'byActivity']);
         
         // Routes instructeur authentifié
+        // Note: 'biplaceur' dans le middleware pour rétrocompatibilité
         Route::middleware(['auth:sanctum', 'role:instructor,biplaceur'])->prefix('me')->group(function () {
             Route::get('/sessions', [InstructorController::class, 'mySessions']);
             Route::get('/sessions/today', [InstructorController::class, 'sessionsToday']);
@@ -111,6 +113,37 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [ActivityController::class, 'store']);
             Route::put('/{id}', [ActivityController::class, 'update']);
             Route::delete('/{id}', [ActivityController::class, 'destroy']);
+        });
+    });
+
+    // ==================== BIPLACEURS (DEPRECATED - Alias vers Instructors) ====================
+    // @deprecated - Utilisez /instructors?activity_type=paragliding à la place
+    Route::prefix('biplaceurs')->group(function () {
+        // Routes publiques
+        Route::get('/', [BiplaceurController::class, 'index']);
+        Route::get('/{id}', [BiplaceurController::class, 'show'])->middleware(['auth:sanctum', 'role:admin']);
+        
+        // Routes admin
+        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+            Route::post('/', [BiplaceurController::class, 'store']);
+            Route::put('/{id}', [BiplaceurController::class, 'update']);
+            Route::delete('/{id}', [BiplaceurController::class, 'destroy']);
+        });
+        
+        // Routes biplaceur authentifié
+        Route::middleware(['auth:sanctum', 'role:biplaceur'])->prefix('me')->group(function () {
+            Route::get('/flights', [BiplaceurController::class, 'myFlights']);
+            Route::get('/flights/today', [BiplaceurController::class, 'flightsToday']);
+            Route::get('/calendar', [BiplaceurController::class, 'calendar']);
+            Route::put('/availability', [BiplaceurController::class, 'updateAvailability']);
+            Route::post('/flights/{id}/mark-done', [BiplaceurController::class, 'markFlightDone']);
+            Route::post('/flights/{id}/reschedule', [BiplaceurController::class, 'rescheduleFlight']);
+            Route::get('/flights/{id}/quick-info', [BiplaceurController::class, 'quickInfo']);
+        });
+        
+        // Routes admin (calendrier spécifique)
+        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+            Route::get('/{id}/calendar', [BiplaceurController::class, 'calendar']);
         });
     });
 
@@ -200,9 +233,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/summary', [DashboardController::class, 'summary']);
         Route::get('/stats', [DashboardController::class, 'stats']); // Alias pour summary
         Route::get('/revenue', [DashboardController::class, 'revenue']);
-        Route::get('/flights', [DashboardController::class, 'flightStats']);
+        Route::get('/flights', [DashboardController::class, 'flightStats']); // @deprecated - Utilisez /activity-stats ou /stats
         Route::get('/top-instructors', [DashboardController::class, 'topInstructors']);
-        Route::get('/top-biplaceurs', [DashboardController::class, 'topBiplaceurs']); // Alias pour rétrocompatibilité
+        Route::get('/top-biplaceurs', [DashboardController::class, 'topBiplaceurs']); // @deprecated - Utilisez /top-instructors?activity_type=paragliding
     });
     
     // ==================== ADMIN - INSTRUCTORS (Générique) ====================
