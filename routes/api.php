@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\v1\NotificationController;
 use App\Http\Controllers\Api\v1\Admin\ReservationAdminController;
 use App\Http\Controllers\Api\v1\Admin\ResourceController;
 use App\Http\Controllers\Api\v1\Admin\ReportController;
+use App\Http\Controllers\Api\Admin\StripeConnectController;
 use App\Http\Controllers\Webhook\StripeWebhookController;
 
 /*
@@ -204,6 +205,21 @@ Route::prefix('v1')->group(function () {
         Route::get('/', [ReportController::class, 'index']);
         Route::get('/daily', [ReportController::class, 'daily']);
         Route::get('/monthly', [ReportController::class, 'monthly']);
+    });
+
+    // ==================== STRIPE CONNECT ====================
+    Route::prefix('admin/stripe/connect')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::post('/account', [StripeConnectController::class, 'createAccount']);
+        Route::get('/status', [StripeConnectController::class, 'getAccountStatus']);
+        Route::get('/login-link', [StripeConnectController::class, 'getLoginLink']);
+    });
+
+    // ==================== SUBSCRIPTIONS ====================
+    Route::prefix('admin/subscriptions')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'create']);
+        Route::get('/current', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'current']);
+        Route::post('/cancel', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'cancel']);
     });
 });
 

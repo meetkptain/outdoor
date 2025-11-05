@@ -23,8 +23,36 @@ class RoleMiddleware
         }
 
         $user = auth()->user();
+        
+        // Récupérer l'organisation courante
+        $organizationId = $user->getCurrentOrganizationId() 
+            ?? $request->header('X-Organization-ID')
+            ?? session('organization_id');
+        
+        if (!$organizationId) {
+            // Fallback: utiliser le rôle global si disponible (compatibilité)
+            if (property_exists($user, 'role') && in_array($user->role, $roles)) {
+                return $next($request);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Organisation non définie',
+            ], 403);
+        }
 
-        if (!in_array($user->role, $roles)) {
+        // Vérifier le rôle dans l'organisation
+        $organization = \App\Models\Organization::find($organizationId);
+        if (!$organization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organisation non trouvée',
+            ], 404);
+        }
+        
+        $userRole = $user->getRoleInOrganization($organization);
+        
+        if (!$userRole || !in_array($userRole, $roles)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Accès non autorisé',

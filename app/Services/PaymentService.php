@@ -36,6 +36,7 @@ class PaymentService
 
     /**
      * Créer un PaymentIntent avec capture manuelle (empreinte ou acompte)
+     * Supporte Stripe Connect pour paiements multi-tenant
      */
     public function createPaymentIntent(
         Reservation $reservation,
@@ -43,18 +44,108 @@ class PaymentService
         string $paymentMethodId,
         string $type = 'deposit'
     ): Payment {
+        $organization = $reservation->organization;
+
+        // Si l'organisation a un compte Stripe Connect, utiliser Stripe Connect
+        if ($organization && $organization->stripe_account_id && $organization->stripe_onboarding_completed) {
+            return $this->createConnectPaymentIntent($reservation, $amount, $paymentMethodId, $type);
+        }
+
+        // Sinon, utiliser le compte principal (avec commission si nécessaire)
+        return $this->createPlatformPaymentIntent($reservation, $amount, $paymentMethodId, $type);
+    }
+
+    /**
+     * Créer un PaymentIntent via Stripe Connect (compte de l'organisation)
+     */
+    protected function createConnectPaymentIntent(
+        Reservation $reservation,
+        float $amount,
+        string $paymentMethodId,
+        string $type = 'deposit'
+    ): Payment {
+        $organization = $reservation->organization;
+        $commissionRate = $organization->commission_rate ?? 5.0; // 5% par défaut
+        $applicationFee = (int) ($amount * 100 * $commissionRate / 100);
+
         try {
             $intent = $this->getStripeClient()->paymentIntents->create([
-                'amount' => (int) ($amount * 100), // Convertir en centimes
+                'amount' => (int) ($amount * 100),
                 'currency' => 'eur',
                 'payment_method' => $paymentMethodId,
-                'capture_method' => 'manual', // Capture manuelle
+                'capture_method' => 'manual',
+                'confirmation_method' => 'manual',
+                'confirm' => true,
+                'application_fee_amount' => $applicationFee,
+                'metadata' => [
+                    'reservation_id' => $reservation->id,
+                    'reservation_uuid' => $reservation->uuid,
+                    'type' => $type,
+                    'organization_id' => $organization->id,
+                ],
+                'description' => "Réservation #{$reservation->uuid} - {$type}",
+            ], [
+                'stripe_account' => $organization->stripe_account_id,
+            ]);
+
+            $payment = Payment::create([
+                'reservation_id' => $reservation->id,
+                'stripe_payment_intent_id' => $intent->id,
+                'type' => $type,
+                'amount' => $amount,
+                'currency' => 'EUR',
+                'status' => $this->mapStripeStatus($intent->status),
+                'payment_method_type' => $intent->payment_method_types[0] ?? null,
+                'payment_method_id' => $paymentMethodId,
+                'stripe_data' => $intent->toArray(),
+            ]);
+
+            // Mettre à jour la réservation
+            $reservation->update([
+                'stripe_payment_intent_id' => $intent->id,
+                'payment_status' => $this->mapStripeStatus($intent->status),
+                'payment_type' => $type,
+                'deposit_amount' => $type === 'deposit' ? $amount : $reservation->deposit_amount,
+                'authorized_amount' => $type === 'authorization' ? $amount : $reservation->authorized_amount,
+            ]);
+
+            if ($intent->status === 'requires_capture') {
+                $payment->update(['authorized_at' => Carbon::now()]);
+            }
+
+            return $payment;
+        } catch (ApiErrorException $e) {
+            Log::error('Stripe PaymentIntent creation failed', [
+                'reservation_id' => $reservation->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new \Exception("Erreur de paiement: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Créer un PaymentIntent sur le compte principal (plateforme)
+     */
+    protected function createPlatformPaymentIntent(
+        Reservation $reservation,
+        float $amount,
+        string $paymentMethodId,
+        string $type = 'deposit'
+    ): Payment {
+        try {
+            $intent = $this->getStripeClient()->paymentIntents->create([
+                'amount' => (int) ($amount * 100),
+                'currency' => 'eur',
+                'payment_method' => $paymentMethodId,
+                'capture_method' => 'manual',
                 'confirmation_method' => 'manual',
                 'confirm' => true,
                 'metadata' => [
                     'reservation_id' => $reservation->id,
                     'reservation_uuid' => $reservation->uuid,
                     'type' => $type,
+                    'organization_id' => $reservation->organization_id,
                 ],
                 'description' => "Réservation #{$reservation->uuid} - {$type}",
             ]);
@@ -104,8 +195,17 @@ class PaymentService
             throw new \Exception("Le paiement ne peut pas être capturé");
         }
 
+        $reservation = $payment->reservation;
+        $organization = $reservation->organization;
+        $stripeAccount = $organization && $organization->stripe_account_id ? $organization->stripe_account_id : null;
+
         try {
-            $intent = $this->getStripeClient()->paymentIntents->retrieve($payment->stripe_payment_intent_id);
+            $retrieveOptions = $stripeAccount ? ['stripe_account' => $stripeAccount] : [];
+            $intent = $this->getStripeClient()->paymentIntents->retrieve(
+                $payment->stripe_payment_intent_id,
+                [],
+                $retrieveOptions
+            );
 
             if ($intent->status !== 'requires_capture') {
                 throw new \Exception("Le PaymentIntent n'est pas en attente de capture");
@@ -117,9 +217,11 @@ class PaymentService
                 $captureParams['amount_to_capture'] = (int) ($amount * 100);
             }
 
+            $captureOptions = $stripeAccount ? ['stripe_account' => $stripeAccount] : [];
             $intent = $this->getStripeClient()->paymentIntents->capture(
                 $payment->stripe_payment_intent_id,
-                $captureParams
+                $captureParams,
+                $captureOptions
             );
 
             $capturedAmount = ($intent->amount_captured ?? $intent->amount) / 100;
