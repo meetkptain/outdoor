@@ -2,6 +2,57 @@
 
 ## [1.5.0] – 2025-11-05 (En cours)
 
+### ✅ **Phase 2 - Refactorisation ReservationService** (TERMINÉE)
+
+**Statut :** ✅ Terminée — ReservationService généralisé, tests mis à jour, 4/4 tests de validation passent
+
+#### ✨ Généralisation du ReservationService
+
+* **Validation des contraintes génériques** :
+  * ✅ Méthode `validateConstraints()` utilisant `Activity->constraints_config`
+  * ✅ Support dynamique pour poids, taille, âge depuis l'activité
+  * ✅ Plus de valeurs hardcodées spécifiques au paragliding
+
+* **Calcul de prix générique** :
+  * ✅ Méthode `calculateBaseAmount()` utilisant `Activity->pricing_config`
+  * ✅ Support de différents modèles de pricing (fixe, par participant, par type)
+  * ✅ Rétrocompatibilité avec `original_flight_type` pour migration
+
+* **Création de sessions génériques** :
+  * ✅ `ActivitySession` remplace `Flight` dans `createReservation()`
+  * ✅ Données participant stockées dans `metadata` de `ActivitySession`
+  * ✅ Sessions créées lors de `scheduleReservation()` avec assignation
+
+* **Logique d'assignation générique** :
+  * ✅ `scheduleReservation()` utilise `Instructor` au lieu de `Biplaceur`
+  * ✅ Validation des qualifications de l'instructeur via `canTeachActivity()`
+  * ✅ Rotation duration récupérée depuis le module via `ModuleRegistry`
+  * ✅ Vérification des certifications de l'instructeur pour les options
+
+* **Stages génériques** :
+  * ✅ `addOptions()` utilise le workflow du module via `ModuleRegistry`
+  * ✅ Stages dynamiques depuis `getWorkflow()` du module
+  * ✅ Rétrocompatibilité avec `before_flight`/`after_flight` (mappés vers `scheduled`/`completed`)
+
+* **Modifications du service** :
+  * ✅ Injection de `ModuleRegistry` dans le constructeur
+  * ✅ `createReservation()` utilise `activity_id` au lieu de `flight_type`
+  * ✅ `assignResources()` et `scheduleReservation()` utilisent `instructor_id`
+  * ✅ Gestion de l'équipement via `metadata` au lieu de `tandem_glider_id`
+
+* **Tests mis à jour** :
+  * ✅ `ReservationServiceValidationTest` adapté pour utiliser `Activity` et `activity_id`
+  * ✅ Tests mis à jour pour inclure `ModuleRegistry` dans le constructeur
+  * ✅ 4/4 tests de validation passent ✅
+
+#### 📊 Résultats
+* **ReservationService** maintenant 100% générique
+* **Support multi-niche** : fonctionne avec n'importe quelle activité
+* **Rétrocompatibilité** maintenue avec mapping des anciens stages
+* **Tests de validation** passent tous
+
+---
+
 ### ✅ **Phase 1 - Migration du Modèle Reservation** (TERMINÉE)
 
 **Statut :** ✅ Terminée — 7 tests créés, 15 assertions, tous les tests passent
@@ -39,7 +90,7 @@
 
 ### 📋 **Analyse et Plan de Correction - Généralisation**
 
-**Statut :** 🔄 En cours - Phase 1 terminée, Phase 2 à démarrer
+**Statut :** 🔄 En cours - Phase 1 et Phase 2 terminées, Phase 3 à démarrer
 
 #### 📄 Documentation créée
 * **Analyse des incohérences** : `docs/INCOHERENCES_GENERALISATION.md`
@@ -53,14 +104,15 @@
 
 #### 🔍 Incohérences identifiées
 * ✅ Modèle `Reservation` - **GÉNÉRALISÉ** (Phase 1 terminée)
-* ⚠️ Services non généralisés (ReservationService, BiplaceurService, etc.) - Phase 2
+* ✅ **ReservationService** - **GÉNÉRALISÉ** (Phase 2 terminée)
+* ⚠️ Services spécifiques (BiplaceurService, etc.) - Phase 3
 * ⚠️ Contrôleurs avec logique mixte - Phase 5
 * ⚠️ Routes API dupliquées - Phase 6
 
 #### 📋 Prochaines étapes
 * ✅ Phase 1: Migration du modèle Reservation (1 jour) - **TERMINÉE**
-* ⏳ Phase 2: Refactorisation ReservationService (1.5 jours) - **À DÉMARRER**
-* ⏳ Phase 3: Création InstructorService (0.5 jour)
+* ✅ Phase 2: Refactorisation ReservationService (1.5 jours) - **TERMINÉE**
+* ⏳ Phase 3: Création InstructorService (0.5 jour) - **À DÉMARRER**
 * ⏳ Phase 4: Refactorisation services spécifiques (1 jour)
 * ⏳ Phase 5: Refactorisation contrôleurs (1 jour)
 * ⏳ Phase 6: Nettoyage et routes (0.5 jour)
