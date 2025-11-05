@@ -1,5 +1,37 @@
 # 🧭 CHANGELOG
 
+## [1.5.0] – 2025-11-05 (En cours)
+
+### 📋 **Analyse et Plan de Correction - Généralisation**
+
+**Statut :** 🔄 En cours de planification
+
+#### 📄 Documentation créée
+* **Analyse des incohérences** : `docs/INCOHERENCES_GENERALISATION.md`
+  * Identification de 25+ fichiers affectés
+  * ~720 lignes à modifier
+  * 12 incohérences critiques identifiées
+* **Plan d'action détaillé** : `docs/PLAN_CORRECTION_INCOHERENCES.md`
+  * 6 phases de correction structurées
+  * Durée estimée: 6.5 jours
+  * Tests et validation inclus
+
+#### 🔍 Incohérences identifiées
+* Modèle `Reservation` encore spécifique au paragliding
+* Services non généralisés (ReservationService, BiplaceurService, etc.)
+* Contrôleurs avec logique mixte
+* Routes API dupliquées
+
+#### 📋 Prochaines étapes
+* Phase 1: Migration du modèle Reservation (1 jour)
+* Phase 2: Refactorisation ReservationService (1.5 jours)
+* Phase 3: Création InstructorService (0.5 jour)
+* Phase 4: Refactorisation services spécifiques (1 jour)
+* Phase 5: Refactorisation contrôleurs (1 jour)
+* Phase 6: Nettoyage et routes (0.5 jour)
+
+---
+
 ## [1.4.0] – 2025-11-05
 
 ### 💳 **Phase 4 – Paiements Multi-Tenant (Stripe Connect)**
