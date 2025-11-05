@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Traits\GlobalTenantScope;
 
 class GiftCard extends Model
 {
-    use HasFactory;
+    use HasFactory, GlobalTenantScope;
 
     protected $fillable = [
+        'organization_id',
         'uuid',
         'code',
         'recipient_email',
@@ -57,6 +59,11 @@ class GiftCard extends Model
                 $giftCard->valid_until = Carbon::now()->addDays($giftCard->validity_days);
             }
         });
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     public function purchaser(): BelongsTo

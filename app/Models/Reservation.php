@@ -10,13 +10,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
+use App\Traits\GlobalTenantScope;
 
 class Reservation extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, GlobalTenantScope;
 
     protected $fillable = [
         'uuid',
+        'organization_id',
         'user_id',
         'client_id',
         'customer_email',
@@ -84,6 +86,11 @@ class Reservation extends Model
     }
 
     // Relations
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

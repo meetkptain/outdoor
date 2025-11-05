@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\GlobalTenantScope;
 
 class Flight extends Model
 {
-    use HasFactory;
+    use HasFactory, GlobalTenantScope;
 
     protected $fillable = [
+        'organization_id',
         'reservation_id',
         'participant_first_name',
         'participant_last_name',
@@ -34,6 +36,11 @@ class Flight extends Model
         'photo_included' => 'boolean',
         'video_included' => 'boolean',
     ];
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
 
     public function reservation(): BelongsTo
     {

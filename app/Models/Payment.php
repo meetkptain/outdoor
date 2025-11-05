@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\GlobalTenantScope;
 
 class Payment extends Model
 {
-    use HasFactory;
+    use HasFactory, GlobalTenantScope;
 
     protected $fillable = [
+        'organization_id',
         'reservation_id',
         'stripe_payment_intent_id',
         'stripe_charge_id',
@@ -42,6 +44,11 @@ class Payment extends Model
         'captured_at' => 'datetime',
         'refunded_at' => 'datetime',
     ];
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
 
     public function reservation(): BelongsTo
     {

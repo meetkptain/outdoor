@@ -12,6 +12,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Middleware global pour définir le contexte tenant
+        $middleware->web(append: [
+            \App\Http\Middleware\SetTenantContext::class,
+        ]);
+        
+        $middleware->api(append: [
+            \App\Http\Middleware\SetTenantContext::class,
+        ]);
+        
         // Alias pour les middlewares
         $middleware->alias([
             'verify.stripe.webhook' => \App\Http\Middleware\VerifyStripeWebhook::class,

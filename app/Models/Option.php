@@ -5,12 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\GlobalTenantScope;
 
 class Option extends Model
 {
-    use HasFactory;
+    use HasFactory, GlobalTenantScope;
 
     protected $fillable = [
+        'organization_id',
         'code',
         'name',
         'description',
@@ -33,6 +36,11 @@ class Option extends Model
         'max_quantity' => 'integer',
         'sort_order' => 'integer',
     ];
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
 
     public function reservations(): BelongsToMany
     {

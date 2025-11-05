@@ -5,12 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\GlobalTenantScope;
 
 class Resource extends Model
 {
-    use HasFactory;
+    use HasFactory, GlobalTenantScope;
 
     protected $fillable = [
+        'organization_id',
         'code',
         'name',
         'type',
@@ -41,6 +44,11 @@ class Resource extends Model
         'last_maintenance_date' => 'date',
         'next_maintenance_date' => 'date',
     ];
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
 
     public function availability(): HasMany
     {
