@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 use App\Traits\GlobalTenantScope;
+use App\Models\Instructor;
+use App\Models\ActivitySession;
+use App\Models\Resource;
 
 class Reservation extends Model
 {
@@ -30,16 +33,16 @@ class Reservation extends Model
         'customer_birth_date',
         'customer_weight',
         'customer_height',
-        'flight_type',
+        // 'flight_type', // ❌ Supprimé - utiliser activity_id + activity_type
         'participants_count',
         'special_requests',
         'status',
         'scheduled_at',
         'scheduled_time',
-        'biplaceur_id',
+        // 'biplaceur_id', // ❌ Supprimé - utiliser instructor_id
         'instructor_id',
         'site_id',
-        'tandem_glider_id',
+        // 'tandem_glider_id', // ❌ Supprimé - utiliser metadata['equipment_id']
         'vehicle_id',
         'coupon_id',
         'gift_card_id',
@@ -108,14 +111,27 @@ class Reservation extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function biplaceur(): BelongsTo
+    /**
+     * @deprecated Utiliser instructor() à la place
+     * Cette méthode est conservée pour rétrocompatibilité
+     */
+    public function biplaceur()
     {
-        return $this->belongsTo(Biplaceur::class);
+        // Pour rétrocompatibilité, retourner la relation même si elle pointe vers une table vide
+        // Les anciens appels doivent utiliser $reservation->instructor() à la place
+        if (class_exists(\App\Models\Biplaceur::class)) {
+            return $this->belongsTo(\App\Models\Biplaceur::class);
+        }
+        // Si Biplaceur n'existe plus, retourner une relation vers Instructor comme fallback
+        return $this->belongsTo(Instructor::class, 'instructor_id');
     }
 
+    /**
+     * Relation vers l'instructeur assigné (générique)
+     */
     public function instructor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'instructor_id');
+        return $this->belongsTo(Instructor::class, 'instructor_id');
     }
 
     public function site(): BelongsTo
@@ -123,8 +139,17 @@ class Reservation extends Model
         return $this->belongsTo(Site::class);
     }
 
+    /**
+     * @deprecated Utiliser getEquipment() pour récupérer l'équipement depuis metadata
+     */
     public function tandemGlider(): BelongsTo
     {
+        // Récupérer depuis metadata si disponible
+        $equipmentId = $this->metadata['equipment_id'] ?? $this->metadata['tandem_glider_id'] ?? null;
+        if ($equipmentId) {
+            return $this->belongsTo(Resource::class, $equipmentId);
+        }
+        // Fallback sur l'ancienne relation si elle existe encore en DB
         return $this->belongsTo(Resource::class, 'tandem_glider_id');
     }
 
@@ -143,9 +168,25 @@ class Reservation extends Model
         return $this->belongsTo(GiftCard::class);
     }
 
+    /**
+     * @deprecated Utiliser activitySessions() à la place
+     */
     public function flights(): HasMany
     {
-        return $this->hasMany(Flight::class);
+        // Pour rétrocompatibilité, retourner les activitySessions correspondants
+        if (class_exists(\App\Models\Flight::class)) {
+            return $this->hasMany(\App\Models\Flight::class);
+        }
+        // Sinon, retourner une collection vide
+        return $this->hasMany(ActivitySession::class)->whereRaw('1=0');
+    }
+
+    /**
+     * Relation vers les sessions d'activité (générique)
+     */
+    public function activitySessions(): HasMany
+    {
+        return $this->hasMany(ActivitySession::class);
     }
 
     public function options(): BelongsToMany
@@ -280,5 +321,32 @@ class Reservation extends Model
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
+    }
+
+    /**
+     * Récupérer l'équipement depuis metadata
+     * Remplacé tandem_glider_id qui était spécifique au paragliding
+     */
+    public function getEquipment(): ?Resource
+    {
+        $equipmentId = $this->metadata['equipment_id'] ?? $this->metadata['tandem_glider_id'] ?? null;
+        if ($equipmentId) {
+            return Resource::find($equipmentId);
+        }
+        return null;
+    }
+
+    /**
+     * Définir l'équipement dans metadata
+     */
+    public function setEquipment(?int $equipmentId): void
+    {
+        $metadata = $this->metadata ?? [];
+        if ($equipmentId) {
+            $metadata['equipment_id'] = $equipmentId;
+        } else {
+            unset($metadata['equipment_id']);
+        }
+        $this->update(['metadata' => $metadata]);
     }
 }

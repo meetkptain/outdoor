@@ -64,14 +64,19 @@ return new class extends Migration
                     ->get();
 
                 foreach ($flights as $flight) {
-                    // Récupérer l'instructor_id depuis le biplaceur si disponible
+                    // Récupérer l'instructor_id depuis la réservation (biplaceur_id ou instructor_id)
                     $reservation = DB::table('reservations')->where('id', $flight->reservation_id)->first();
                     $instructorId = null;
                     
-                    if ($reservation && $reservation->biplaceur_id) {
-                        $biplaceur = DB::table('biplaceurs')->where('id', $reservation->biplaceur_id)->first();
-                        if ($biplaceur && $biplaceur->instructor_id) {
-                            $instructorId = $biplaceur->instructor_id;
+                    if ($reservation) {
+                        // Priorité: instructor_id (si déjà migré) sinon biplaceur_id
+                        if ($reservation->instructor_id) {
+                            $instructorId = $reservation->instructor_id;
+                        } elseif ($reservation->biplaceur_id) {
+                            $biplaceur = DB::table('biplaceurs')->where('id', $reservation->biplaceur_id)->first();
+                            if ($biplaceur && $biplaceur->instructor_id) {
+                                $instructorId = $biplaceur->instructor_id;
+                            }
                         }
                     }
 

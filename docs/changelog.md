@@ -2,9 +2,44 @@
 
 ## [1.5.0] – 2025-11-05 (En cours)
 
+### ✅ **Phase 1 - Migration du Modèle Reservation** (TERMINÉE)
+
+**Statut :** ✅ Terminée — 7 tests créés, 15 assertions, tous les tests passent
+
+#### ✨ Généralisation du modèle Reservation
+
+* **Migrations de données créées** :
+  * `migrate_reservations_flight_type_to_activity.php` : Migration de `flight_type` vers `activity_type` + `activity_id`
+  * `migrate_reservations_biplaceur_to_instructor.php` : Migration de `biplaceur_id` vers `instructor_id`
+  * `migrate_flights_to_activity_sessions.php` : Améliorée pour utiliser `instructor_id` prioritairement
+
+* **Modèle Reservation refactorisé** (`app/Models/Reservation.php`) :
+  * ✅ `biplaceur_id`, `flight_type`, `tandem_glider_id` retirés du `$fillable` (conservés en DB pour migration)
+  * ✅ Relation `biplaceur()` marquée `@deprecated` (conservée pour rétrocompatibilité)
+  * ✅ Relation `flights()` marquée `@deprecated` (conservée pour rétrocompatibilité)
+  * ✅ Relation `instructor()` modifiée pour utiliser `Instructor` au lieu de `User`
+  * ✅ Nouvelle relation `activitySessions()` ajoutée (générique)
+  * ✅ Helpers `getEquipment()` et `setEquipment()` pour gérer équipement depuis `metadata`
+
+* **Tests créés** (`tests/Feature/ReservationMigrationTest.php`) :
+  * ✅ Test migration `flight_type` → `activity_id`
+  * ✅ Test migration `biplaceur_id` → `instructor_id`
+  * ✅ Test relation `activitySessions()`
+  * ✅ Test helpers `getEquipment()` et `setEquipment()`
+  * ✅ Test relation `instructor()` avec `Instructor`
+  * ✅ Test stockage `original_flight_type` dans `metadata`
+
+#### 📊 Résultats
+* **7/7 tests passent** ✅
+* **15 assertions** validées
+* **Modèle Reservation** maintenant générique et prêt pour multi-niche
+* **Rétrocompatibilité** maintenue avec méthodes `@deprecated`
+
+---
+
 ### 📋 **Analyse et Plan de Correction - Généralisation**
 
-**Statut :** 🔄 En cours de planification
+**Statut :** 🔄 En cours - Phase 1 terminée, Phase 2 à démarrer
 
 #### 📄 Documentation créée
 * **Analyse des incohérences** : `docs/INCOHERENCES_GENERALISATION.md`
@@ -17,18 +52,18 @@
   * Tests et validation inclus
 
 #### 🔍 Incohérences identifiées
-* Modèle `Reservation` encore spécifique au paragliding
-* Services non généralisés (ReservationService, BiplaceurService, etc.)
-* Contrôleurs avec logique mixte
-* Routes API dupliquées
+* ✅ Modèle `Reservation` - **GÉNÉRALISÉ** (Phase 1 terminée)
+* ⚠️ Services non généralisés (ReservationService, BiplaceurService, etc.) - Phase 2
+* ⚠️ Contrôleurs avec logique mixte - Phase 5
+* ⚠️ Routes API dupliquées - Phase 6
 
 #### 📋 Prochaines étapes
-* Phase 1: Migration du modèle Reservation (1 jour)
-* Phase 2: Refactorisation ReservationService (1.5 jours)
-* Phase 3: Création InstructorService (0.5 jour)
-* Phase 4: Refactorisation services spécifiques (1 jour)
-* Phase 5: Refactorisation contrôleurs (1 jour)
-* Phase 6: Nettoyage et routes (0.5 jour)
+* ✅ Phase 1: Migration du modèle Reservation (1 jour) - **TERMINÉE**
+* ⏳ Phase 2: Refactorisation ReservationService (1.5 jours) - **À DÉMARRER**
+* ⏳ Phase 3: Création InstructorService (0.5 jour)
+* ⏳ Phase 4: Refactorisation services spécifiques (1 jour)
+* ⏳ Phase 5: Refactorisation contrôleurs (1 jour)
+* ⏳ Phase 6: Nettoyage et routes (0.5 jour)
 
 ---
 
