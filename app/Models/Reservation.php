@@ -19,6 +19,8 @@ class Reservation extends Model
     protected $fillable = [
         'uuid',
         'organization_id',
+        'activity_id',
+        'activity_type',
         'user_id',
         'client_id',
         'customer_email',
@@ -89,6 +91,11 @@ class Reservation extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function activity(): BelongsTo
+    {
+        return $this->belongsTo(Activity::class);
     }
 
     public function user(): BelongsTo

@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withProviders([
         \App\Providers\EventServiceProvider::class,
+        \App\Providers\ModuleServiceProvider::class,
     ])
     ->withExceptions(function (Exceptions $exceptions) {
         //
