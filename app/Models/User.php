@@ -9,6 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -36,6 +37,18 @@ class User extends Authenticatable
     }
 
     // Relations
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'organization_roles')
+            ->withPivot('role', 'permissions')
+            ->withTimestamps()
+            ->using(new class extends \Illuminate\Database\Eloquent\Relations\Pivot {
+                protected $casts = [
+                    'permissions' => 'array',
+                ];
+            });
+    }
+
     public function client(): HasOne
     {
         return $this->hasOne(Client::class);
@@ -81,6 +94,57 @@ class User extends Authenticatable
     public function isClient(): bool
     {
         return $this->role === 'client';
+    }
+
+    // Multi-tenant helpers
+    protected $currentOrganizationId = null;
+
+    public function setCurrentOrganization(?Organization $organization): void
+    {
+        if ($organization && $this->organizations->contains($organization->id)) {
+            $this->currentOrganizationId = $organization->id;
+            session(['organization_id' => $organization->id]);
+        }
+    }
+
+    public function getCurrentOrganizationId(): ?int
+    {
+        if ($this->currentOrganizationId !== null) {
+            return $this->currentOrganizationId;
+        }
+
+        if (session()->has('organization_id')) {
+            return session('organization_id');
+        }
+
+        // Par défaut, retourner la première organisation de l'utilisateur
+        $firstOrg = $this->organizations()->first();
+        if ($firstOrg) {
+            session(['organization_id' => $firstOrg->id]);
+            return $firstOrg->id;
+        }
+
+        return null;
+    }
+
+    public function getCurrentOrganization(): ?Organization
+    {
+        $orgId = $this->getCurrentOrganizationId();
+        if ($orgId) {
+            return $this->organizations()->find($orgId);
+        }
+        return null;
+    }
+
+    public function belongsToOrganization(Organization $organization): bool
+    {
+        return $this->organizations->contains($organization->id);
+    }
+
+    public function getRoleInOrganization(Organization $organization): ?string
+    {
+        $pivot = $this->organizations()->where('organization_id', $organization->id)->first()?->pivot;
+        return $pivot->role ?? null;
     }
 }
 
