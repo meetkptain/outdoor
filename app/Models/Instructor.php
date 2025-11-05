@@ -70,7 +70,10 @@ class Instructor extends Model
     // Helpers
     public function canTeachActivity(string $activityType): bool
     {
-        return in_array($activityType, $this->activity_types ?? []);
+        $types = is_array($this->activity_types) 
+            ? $this->activity_types 
+            : (json_decode($this->activity_types, true) ?? []);
+        return in_array($activityType, $types);
     }
 
     public function addActivityType(string $activityType): void

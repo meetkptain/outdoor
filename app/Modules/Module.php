@@ -65,5 +65,10 @@ class Module
     {
         return $this->getConstraints()[$key] ?? $default;
     }
+
+    public function getFeature(string $key, $default = null)
+    {
+        return $this->getFeatures()[$key] ?? $default;
+    }
 }
 
