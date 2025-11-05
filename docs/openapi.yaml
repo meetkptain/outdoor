@@ -1,0 +1,896 @@
+openapi: 3.1.0
+info:
+  title: API Parapente - Système de Réservation
+  description: |
+    API complète pour la gestion d'un système de réservation de parapente.
+    Inclut la gestion des réservations, paiements Stripe, biplaceurs, clients, et ressources.
+    
+    **Version API** : v1  
+    **Total d'endpoints** : 96 routes
+    
+    ## Authentification
+    L'API utilise Laravel Sanctum avec Bearer Token.
+    
+    ## Rôles
+    - **client** : Utilisateur client (réservations, historique)
+    - **biplaceur** : Pilote tandem (vols, calendrier, paiements)
+    - **admin** : Administrateur (toutes les opérations)
+  version: 1.0.0
+  contact:
+    name: Support API
+    email: support@parapente.example.com
+
+servers:
+  - url: https://api.parapente.example.com/api/v1
+    description: Production
+  - url: http://localhost:8000/api/v1
+    description: Development
+
+tags:
+  - name: Authentication
+    description: Authentification et gestion des utilisateurs
+  - name: Reservations
+    description: Gestion des réservations
+  - name: Payments
+    description: Gestion des paiements Stripe
+  - name: Biplaceurs
+    description: Gestion des biplaceurs (pilotes tandem)
+  - name: Clients
+    description: Gestion des clients
+  - name: Options
+    description: Gestion des options (photos, vidéos, etc.)
+  - name: Coupons
+    description: Gestion des coupons de réduction
+  - name: GiftCards
+    description: Gestion des bons cadeaux
+  - name: Sites
+    description: Gestion des sites de décollage
+  - name: Resources
+    description: Gestion des ressources (navettes, tandem gliders)
+  - name: Dashboard
+    description: Dashboard admin et statistiques
+  - name: Notifications
+    description: Gestion des notifications
+  - name: Reports
+    description: Rapports et statistiques
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token d'authentification Laravel Sanctum
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Message d'erreur"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [client, biplaceur, admin]
+        created_at:
+          type: string
+          format: date-time
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+        customer_email:
+          type: string
+          format: email
+        customer_first_name:
+          type: string
+        customer_last_name:
+          type: string
+        customer_weight:
+          type: integer
+          minimum: 40
+          maximum: 120
+        customer_height:
+          type: integer
+          minimum: 140
+          maximum: 250
+        flight_type:
+          type: string
+          enum: [tandem, biplace, initiation, perfectionnement, autonome]
+        status:
+          type: string
+          enum: [pending, authorized, scheduled, confirmed, completed, cancelled, rescheduled, refunded]
+        payment_status:
+          type: string
+          enum: [pending, authorized, partially_captured, captured, failed, refunded]
+        base_amount:
+          type: number
+          format: decimal
+        total_amount:
+          type: number
+          format: decimal
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateReservationRequest:
+      type: object
+      required:
+        - customer_email
+        - customer_first_name
+        - customer_last_name
+        - flight_type
+        - participants_count
+        - payment_type
+        - payment_method_id
+      properties:
+        customer_email:
+          type: string
+          format: email
+        customer_phone:
+          type: string
+        customer_first_name:
+          type: string
+        customer_last_name:
+          type: string
+        customer_birth_date:
+          type: string
+          format: date
+        customer_weight:
+          type: integer
+          minimum: 40
+          maximum: 120
+        customer_height:
+          type: integer
+          minimum: 140
+          maximum: 250
+        flight_type:
+          type: string
+          enum: [tandem, biplace, initiation, perfectionnement, autonome]
+        participants_count:
+          type: integer
+          minimum: 1
+          maximum: 10
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              first_name:
+                type: string
+              last_name:
+                type: string
+              birth_date:
+                type: string
+                format: date
+              weight:
+                type: integer
+                minimum: 40
+                maximum: 120
+              height:
+                type: integer
+                minimum: 140
+                maximum: 250
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              quantity:
+                type: integer
+                minimum: 1
+        coupon_code:
+          type: string
+        gift_card_code:
+          type: string
+        payment_type:
+          type: string
+          enum: [deposit, authorization, both]
+        payment_method_id:
+          type: string
+        special_requests:
+          type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            data:
+              type: array
+            current_page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+            last_page:
+              type: integer
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Connexion utilisateur
+      description: Authentifie un utilisateur et retourne un token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+                          token:
+                            type: string
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Inscription client
+      description: Crée un nouveau compte client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+                - password_confirmation
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                password_confirmation:
+                  type: string
+                  format: password
+      responses:
+        '201':
+          description: Inscription réussie
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+                          token:
+                            type: string
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Profil utilisateur
+      description: Récupère les informations de l'utilisateur authentifié
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Déconnexion
+      description: Déconnecte l'utilisateur et invalide le token
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie
+
+  /reservations:
+    post:
+      tags:
+        - Reservations
+      summary: Créer une réservation
+      description: |
+        Crée une nouvelle réservation. Les contraintes suivantes s'appliquent :
+        - Poids client : 40-120 kg
+        - Taille client : Minimum 140 cm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservationRequest'
+      responses:
+        '201':
+          description: Réservation créée
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          reservation:
+                            $ref: '#/components/schemas/Reservation'
+                          payment:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                              client_secret:
+                                type: string
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reservations/{uuid}:
+    get:
+      tags:
+        - Reservations
+      summary: Récupérer une réservation
+      description: Récupère les détails d'une réservation par UUID
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails de la réservation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Reservation'
+        '404':
+          description: Réservation non trouvée
+
+  /my/reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Mes réservations
+      description: Liste les réservations de l'utilisateur authentifié (client)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+      responses:
+        '200':
+          description: Liste des réservations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /admin/reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Liste des réservations (Admin)
+      description: Liste toutes les réservations avec filtres
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, authorized, scheduled, confirmed, completed, cancelled, rescheduled, refunded]
+        - name: payment_status
+          in: query
+          schema:
+            type: string
+            enum: [pending, authorized, partially_captured, captured, failed, refunded]
+        - name: flight_type
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+      responses:
+        '200':
+          description: Liste des réservations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /admin/reservations/{id}/schedule:
+    post:
+      tags:
+        - Reservations
+      summary: Planifier une réservation
+      description: |
+        Planifie une réservation avec date et ressources. Valide automatiquement :
+        - Limite de vols par jour du biplaceur (5 max)
+        - Pause obligatoire de 30 min entre vols
+        - Certifications biplaceur pour options
+        - Capacité navette (8 passagers max)
+        - Poids total navette (450 kg max)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scheduled_at
+                - instructor_id
+              properties:
+                scheduled_at:
+                  type: string
+                  format: date-time
+                instructor_id:
+                  type: integer
+                site_id:
+                  type: integer
+                tandem_glider_id:
+                  type: integer
+                vehicle_id:
+                  type: integer
+      responses:
+        '200':
+          description: Réservation planifiée
+        '400':
+          description: Erreur de validation ou contraintes non respectées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Dashboard principal
+      description: Vue d'ensemble du dashboard admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Données du dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /admin/dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Statistiques
+      description: Statistiques détaillées du dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Statistiques
+
+  /admin/dashboard/revenue:
+    get:
+      tags:
+        - Dashboard
+      summary: Revenus
+      description: Statistiques de revenus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statistiques de revenus
+
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Liste des notifications
+      description: Liste les notifications de l'utilisateur authentifié
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [email, sms, push]
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: reservation_id
+          in: query
+          schema:
+            type: integer
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+      responses:
+        '200':
+          description: Liste des notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /notifications/unread-count:
+    get:
+      tags:
+        - Notifications
+      summary: Compter les notifications non lues
+      description: Retourne le nombre de notifications non lues
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Nombre de notifications non lues
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          unread_count:
+                            type: integer
+
+  /admin/reports/daily:
+    get:
+      tags:
+        - Reports
+      summary: Rapport quotidien
+      description: Génère un rapport quotidien avec statistiques
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+            default: today
+      responses:
+        '200':
+          description: Rapport quotidien
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          date:
+                            type: string
+                            format: date
+                          stats:
+                            type: object
+                            properties:
+                              reservations:
+                                type: integer
+                              scheduled:
+                                type: integer
+                              completed:
+                                type: integer
+                              cancelled:
+                                type: integer
+                          revenue:
+                            type: number
+                            format: decimal
+                          yesterday_revenue:
+                            type: number
+                            format: decimal
+                          revenue_evolution:
+                            type: string
+
+  /admin/reports/monthly:
+    get:
+      tags:
+        - Reports
+      summary: Rapport mensuel
+      description: Génère un rapport mensuel avec breakdown quotidien
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+      responses:
+        '200':
+          description: Rapport mensuel
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          month:
+                            type: string
+                          total_revenue:
+                            type: number
+                            format: decimal
+                          daily_breakdown:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date:
+                                  type: string
+                                  format: date
+                                revenue:
+                                  type: number
+                                  format: decimal
+
+  /sites:
+    get:
+      tags:
+        - Sites
+      summary: Liste des sites
+      description: Liste tous les sites de décollage (public)
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: difficulty_level
+          in: query
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des sites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /admin/resources:
+    get:
+      tags:
+        - Resources
+      summary: Liste des ressources
+      description: Liste toutes les ressources (navettes, tandem gliders, équipements)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [vehicle, tandem_glider, equipment]
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des ressources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /admin/resources/available:
+    get:
+      tags:
+        - Resources
+      summary: Ressources disponibles
+      description: Liste les ressources disponibles pour une date/heure donnée
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [vehicle, tandem_glider, equipment]
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: time
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{2}:\d{2}$'
+      responses:
+        '200':
+          description: Ressources disponibles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+

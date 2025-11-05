@@ -1,0 +1,26 @@
+# Composer vendor directory
+/vendor/
+
+# Composer lock file (optionnel, selon projet)
+/composer.lock
+
+# Environnement local
+.env
+.env.local
+.env.*.local
+
+# Logs et fichiers temporaires
+*.log
+*.cache
+*.tmp
+
+# IDE et OS spécifiques
+/.idea/
+/.vscode/
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Stripe keys ou secrets (au cas où)
+*.key
+*.pem
