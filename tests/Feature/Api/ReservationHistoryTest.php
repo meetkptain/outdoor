@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Reservation;
 use App\Models\ReservationHistory;
 use App\Models\User;
+use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,12 +15,17 @@ class ReservationHistoryTest extends TestCase
 
     protected User $admin;
     protected User $client;
+    protected Organization $organization;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->organization = Organization::factory()->create();
         $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->organization->users()->attach($this->admin->id, ['role' => 'admin', 'permissions' => ['*']]);
+        $this->admin->setCurrentOrganization($this->organization);
         $this->client = User::factory()->create(['role' => 'client']);
+        $this->organization->users()->attach($this->client->id, ['role' => 'client', 'permissions' => []]);
     }
 
     /**
@@ -27,16 +33,19 @@ class ReservationHistoryTest extends TestCase
      */
     public function test_admin_can_view_reservation_history(): void
     {
-        $reservation = Reservation::factory()->create();
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
         
         ReservationHistory::factory()->count(3)->create([
             'reservation_id' => $reservation->id,
             'user_id' => $this->admin->id,
         ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson("/api/v1/admin/reservations/{$reservation->id}/history");
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson("/api/v1/admin/reservations/{$reservation->id}/history");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -62,6 +71,7 @@ class ReservationHistoryTest extends TestCase
     public function test_client_can_view_own_reservation_history(): void
     {
         $reservation = Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
             'user_id' => $this->client->id,
         ]);
         
@@ -70,9 +80,9 @@ class ReservationHistoryTest extends TestCase
             'user_id' => $this->admin->id,
         ]);
 
-        $this->actingAs($this->client, 'sanctum');
-
-        $response = $this->getJson("/api/v1/my/reservations/{$reservation->id}/history");
+        $response = $this->actingAs($this->client, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->getJson("/api/v1/my/reservations/{$reservation->id}/history");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -117,11 +127,14 @@ class ReservationHistoryTest extends TestCase
      */
     public function test_returns_empty_history_when_no_history_exists(): void
     {
-        $reservation = Reservation::factory()->create();
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson("/api/v1/admin/reservations/{$reservation->id}/history");
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson("/api/v1/admin/reservations/{$reservation->id}/history");
 
         $response->assertStatus(200);
         $data = $response->json('data');
@@ -133,7 +146,9 @@ class ReservationHistoryTest extends TestCase
      */
     public function test_history_is_ordered_by_date_descending(): void
     {
-        $reservation = Reservation::factory()->create();
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
         
         $oldHistory = ReservationHistory::factory()->create([
             'reservation_id' => $reservation->id,
@@ -145,9 +160,10 @@ class ReservationHistoryTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson("/api/v1/admin/reservations/{$reservation->id}/history");
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson("/api/v1/admin/reservations/{$reservation->id}/history");
 
         $response->assertStatus(200);
         $data = $response->json('data');

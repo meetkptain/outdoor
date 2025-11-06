@@ -17,11 +17,28 @@ class ActivityController extends Controller
     public function index(Request $request): JsonResponse
     {
         $activityType = $request->query('activity_type');
-        $user = $request->user();
-        $organization = $user ? $user->getCurrentOrganization() : null;
+        
+        // Récupérer l'organisation depuis le middleware SetTenantContext
+        $organization = config('app.current_organization');
         
         if (!$organization) {
-            $organization = Organization::first();
+            // Fallback : depuis l'utilisateur authentifié
+            $user = $request->user();
+            $organization = $user ? $user->getCurrentOrganization() : null;
+        }
+        
+        if (!$organization) {
+            // Fallback : depuis la session
+            if (session()->has('organization_id')) {
+                $organization = Organization::find(session('organization_id'));
+            }
+        }
+        
+        if (!$organization) {
+            // Fallback : depuis le header
+            if ($request->hasHeader('X-Organization-ID')) {
+                $organization = Organization::find($request->header('X-Organization-ID'));
+            }
         }
         
         if (!$organization) {
@@ -31,7 +48,8 @@ class ActivityController extends Controller
             ], 404);
         }
 
-        $query = Activity::where('organization_id', $organization->id)
+        $query = Activity::withoutGlobalScopes()
+            ->where('organization_id', $organization->id)
             ->where('is_active', true);
 
         if ($activityType) {

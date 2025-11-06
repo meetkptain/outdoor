@@ -59,18 +59,22 @@ class InstructorControllerTest extends TestCase
         $paraglidingInstructor = Instructor::factory()->create([
             'organization_id' => $this->organization->id,
             'user_id' => User::factory()->create()->id,
-            'activity_types' => json_encode(['paragliding']),
+            'activity_types' => ['paragliding'], // Utiliser un tableau directement
             'is_active' => true,
         ]);
 
         $surfingInstructor = Instructor::factory()->create([
             'organization_id' => $this->organization->id,
             'user_id' => User::factory()->create()->id,
-            'activity_types' => json_encode(['surfing']),
+            'activity_types' => ['surfing'], // Utiliser un tableau directement
             'is_active' => true,
         ]);
 
-        $response = $this->getJson('/api/v1/instructors/by-activity/paragliding');
+        // Définir le contexte d'organisation pour la requête
+        config(['app.current_organization' => $this->organization->id]);
+        
+        $response = $this->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/instructors/by-activity/paragliding');
 
         $response->assertOk();
         $data = $response->json('data');

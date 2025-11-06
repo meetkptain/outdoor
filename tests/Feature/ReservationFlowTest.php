@@ -34,6 +34,13 @@ class ReservationFlowTest extends TestCase
             ]));
         $this->app->instance(\App\Services\PaymentService::class, $paymentServiceMock);
 
+        // Créer une organisation et une activité
+        $organization = \App\Models\Organization::factory()->create();
+        $activity = \App\Models\Activity::factory()->create([
+            'organization_id' => $organization->id,
+            'activity_type' => 'paragliding',
+        ]);
+
         // 1. Créer une réservation
         $reservationData = [
             'customer_email' => 'client@example.com',
@@ -41,7 +48,7 @@ class ReservationFlowTest extends TestCase
             'customer_last_name' => 'Doe',
             'customer_weight' => 75,
             'customer_height' => 175,
-            'flight_type' => 'tandem',
+            'activity_id' => $activity->id,
             'participants_count' => 1,
             'payment_type' => 'deposit',
             'payment_method_id' => 'pm_test_1234567890', // Requis pour CreateReservationRequest
@@ -55,22 +62,34 @@ class ReservationFlowTest extends TestCase
 
         // 2. Assigner des ressources (admin)
         $admin = User::factory()->create(['role' => 'admin']);
-        $biplaceur = Biplaceur::factory()->create();
-        $site = Site::factory()->create();
-        $tandemGlider = Resource::factory()->create(['type' => 'tandem_glider']);
-        $vehicle = Resource::factory()->create(['type' => 'vehicle']);
-
-        $this->actingAs($admin, 'sanctum');
+        $organization->users()->attach($admin->id, ['role' => 'admin', 'permissions' => ['*']]);
+        $instructor = \App\Models\Instructor::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $site = Site::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $tandemGlider = Resource::factory()->create([
+            'organization_id' => $organization->id,
+            'type' => 'tandem_glider',
+        ]);
+        $vehicle = Resource::factory()->create([
+            'organization_id' => $organization->id,
+            'type' => 'vehicle',
+        ]);
 
         $scheduledAt = now()->addDays(7)->setTime(10, 0);
 
-        $assignResponse = $this->putJson("/api/v1/admin/reservations/{$reservation->id}/assign", [
-            'scheduled_at' => $scheduledAt->toDateTimeString(),
-            'instructor_id' => $biplaceur->user_id, // assign() utilise instructor_id
-            'site_id' => $site->id,
-            'tandem_glider_id' => $tandemGlider->id,
-            'vehicle_id' => $vehicle->id,
-        ]);
+        $assignResponse = $this->actingAs($admin, 'sanctum')
+            ->withSession(['organization_id' => $organization->id])
+            ->withHeaders(['X-Organization-ID' => $organization->id])
+            ->putJson("/api/v1/admin/reservations/{$reservation->id}/assign", [
+                'scheduled_at' => $scheduledAt->toDateTimeString(),
+                'instructor_id' => $instructor->id,
+                'site_id' => $site->id,
+                'equipment_id' => $tandemGlider->id,
+                'vehicle_id' => $vehicle->id,
+            ]);
 
         $assignResponse->assertStatus(200);
 
@@ -80,16 +99,29 @@ class ReservationFlowTest extends TestCase
 
         // 3. Capturer le paiement (admin)
         $payment = $reservation->payments()->first();
-        if ($payment && $payment->canBeCaptured()) {
-            $captureResponse = $this->postJson("/api/v1/admin/reservations/{$reservation->id}/capture", [
-                'payment_id' => $payment->id,
-            ]);
+        if ($payment && method_exists($payment, 'canBeCaptured') && $payment->canBeCaptured()) {
+            // Mock PaymentService pour éviter les appels Stripe réels
+            $paymentServiceMock = $this->mock(\App\Services\PaymentService::class);
+            $paymentServiceMock->shouldReceive('capturePayment')
+                ->once()
+                ->andReturn(true);
+            $this->app->instance(\App\Services\PaymentService::class, $paymentServiceMock);
+
+            $captureResponse = $this->actingAs($admin, 'sanctum')
+                ->withSession(['organization_id' => $organization->id])
+                ->withHeaders(['X-Organization-ID' => $organization->id])
+                ->postJson("/api/v1/admin/reservations/{$reservation->id}/capture", [
+                    'amount' => $payment->amount ?? 100.00,
+                ]);
 
             $captureResponse->assertStatus(200);
         }
 
         // 4. Marquer comme complété (admin)
-        $completeResponse = $this->postJson("/api/v1/admin/reservations/{$reservation->id}/complete");
+        $completeResponse = $this->actingAs($admin, 'sanctum')
+            ->withSession(['organization_id' => $organization->id])
+            ->withHeaders(['X-Organization-ID' => $organization->id])
+            ->postJson("/api/v1/admin/reservations/{$reservation->id}/complete");
 
         $completeResponse->assertStatus(200);
 
@@ -102,6 +134,13 @@ class ReservationFlowTest extends TestCase
      */
     public function test_can_add_options_after_reservation_creation(): void
     {
+        // Créer une organisation et une activité
+        $organization = \App\Models\Organization::factory()->create();
+        $activity = \App\Models\Activity::factory()->create([
+            'organization_id' => $organization->id,
+            'activity_type' => 'paragliding',
+        ]);
+        
         // Mock PaymentService pour éviter les appels Stripe réels
         // createAdditionalPayment peut ne pas être appelé si le montant n'augmente pas
         $paymentServiceMock = $this->mock(\App\Services\PaymentService::class);
@@ -112,12 +151,22 @@ class ReservationFlowTest extends TestCase
 
         $reservation = Reservation::factory()->create([
             'status' => 'pending',
+            'organization_id' => $organization->id,
+            'activity_id' => $activity->id,
+            'activity_type' => $activity->activity_type,
+            'base_amount' => 100.00,
+            'options_amount' => 0.00,
+            'total_amount' => 100.00,
         ]);
 
         $option = Option::factory()->create([
+            'organization_id' => $organization->id,
             'is_active' => true,
             'price' => 25.00,
         ]);
+
+        // Définir le contexte d'organisation pour que GlobalTenantScope fonctionne
+        config(['app.current_organization' => $organization->id]);
 
         $response = $this->postJson("/api/v1/reservations/{$reservation->uuid}/add-options", [
             'options' => [
@@ -128,7 +177,7 @@ class ReservationFlowTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertTrue($reservation->options()->where('options.id', $option->id)->exists());
+        $this->assertTrue($reservation->fresh()->options()->where('options.id', $option->id)->exists());
     }
 
     /**
@@ -136,8 +185,12 @@ class ReservationFlowTest extends TestCase
      */
     public function test_validates_biplaceur_constraints_on_assignment(): void
     {
+        // Créer une organisation
+        $organization = \App\Models\Organization::factory()->create();
+        
         // Créer un biplaceur avec limite de 5 vols/jour
         $biplaceur = Biplaceur::factory()->create([
+            'organization_id' => $organization->id,
             'max_flights_per_day' => 5,
         ]);
 
@@ -145,6 +198,7 @@ class ReservationFlowTest extends TestCase
         $scheduledAt = now()->setTime(10, 0);
         for ($i = 0; $i < 5; $i++) {
             Reservation::factory()->create([
+                'organization_id' => $organization->id,
                 'biplaceur_id' => $biplaceur->id,
                 'status' => 'scheduled',
                 'scheduled_at' => $scheduledAt->copy()->addHours($i),
@@ -154,23 +208,32 @@ class ReservationFlowTest extends TestCase
         // Tenter d'assigner une 6ème réservation
         $newReservation = Reservation::factory()->create([
             'status' => 'pending',
+            'organization_id' => $organization->id,
         ]);
 
         $admin = User::factory()->create(['role' => 'admin']);
-        $site = Site::factory()->create();
-        $tandemGlider = Resource::factory()->create(['type' => 'tandem_glider']);
-        $vehicle = Resource::factory()->create(['type' => 'vehicle']);
-
-        $this->actingAs($admin, 'sanctum');
+        $organization->users()->attach($admin->id, ['role' => 'admin', 'permissions' => ['*']]);
+        $site = Site::factory()->create(['organization_id' => $organization->id]);
+        $tandemGlider = Resource::factory()->create([
+            'organization_id' => $organization->id,
+            'type' => 'tandem_glider'
+        ]);
+        $vehicle = Resource::factory()->create([
+            'organization_id' => $organization->id,
+            'type' => 'vehicle'
+        ]);
 
         // Utiliser schedule() au lieu de assign() pour tester les contraintes biplaceur
-        $response = $this->postJson("/api/v1/admin/reservations/{$newReservation->id}/schedule", [
-            'scheduled_at' => $scheduledAt->copy()->addHours(6)->toDateTimeString(),
-            'biplaceur_id' => $biplaceur->id, // schedule() utilise biplaceur_id et valide les contraintes
-            'site_id' => $site->id,
-            'tandem_glider_id' => $tandemGlider->id,
-            'vehicle_id' => $vehicle->id,
-        ]);
+        $response = $this->actingAs($admin, 'sanctum')
+            ->withSession(['organization_id' => $organization->id])
+            ->withHeaders(['X-Organization-ID' => $organization->id])
+            ->postJson("/api/v1/admin/reservations/{$newReservation->id}/schedule", [
+                'scheduled_at' => $scheduledAt->copy()->addHours(6)->toDateTimeString(),
+                'biplaceur_id' => $biplaceur->id, // schedule() utilise biplaceur_id et valide les contraintes
+                'site_id' => $site->id,
+                'tandem_glider_id' => $tandemGlider->id,
+                'vehicle_id' => $vehicle->id,
+            ]);
 
         // Devrait être rejeté car limite atteinte (5 vols max)
         $response->assertStatus(400); // schedule() retourne 400 avec message d'erreur
@@ -184,13 +247,27 @@ class ReservationFlowTest extends TestCase
      */
     public function test_validates_mandatory_break_between_flights(): void
     {
-        $biplaceur = Biplaceur::factory()->create();
-        $site = Site::factory()->create();
-        $tandemGlider = Resource::factory()->create(['type' => 'tandem_glider']);
-        $vehicle = Resource::factory()->create(['type' => 'vehicle']);
+        // Créer une organisation
+        $organization = \App\Models\Organization::factory()->create();
+        
+        $biplaceur = Biplaceur::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $site = Site::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+        $tandemGlider = Resource::factory()->create([
+            'organization_id' => $organization->id,
+            'type' => 'tandem_glider'
+        ]);
+        $vehicle = Resource::factory()->create([
+            'organization_id' => $organization->id,
+            'type' => 'vehicle'
+        ]);
 
         // Créer une réservation assignée à 10h00
         $firstReservation = Reservation::factory()->create([
+            'organization_id' => $organization->id,
             'biplaceur_id' => $biplaceur->id,
             'status' => 'scheduled',
             'scheduled_at' => now()->addDay()->setTime(10, 0),
@@ -199,19 +276,22 @@ class ReservationFlowTest extends TestCase
         // Tenter d'assigner une deuxième réservation à 10h15 (trop tôt, besoin de 30 min de pause)
         $newReservation = Reservation::factory()->create([
             'status' => 'pending',
+            'organization_id' => $organization->id,
         ]);
 
         $admin = User::factory()->create(['role' => 'admin']);
+        $organization->users()->attach($admin->id, ['role' => 'admin', 'permissions' => ['*']]);
 
-        $this->actingAs($admin, 'sanctum');
-
-        $response = $this->putJson("/api/v1/admin/reservations/{$newReservation->id}/assign", [
-            'scheduled_at' => now()->addDay()->setTime(10, 15)->toDateTimeString(),
-            'biplaceur_id' => $biplaceur->id,
-            'site_id' => $site->id,
-            'tandem_glider_id' => $tandemGlider->id,
-            'vehicle_id' => $vehicle->id,
-        ]);
+        $response = $this->actingAs($admin, 'sanctum')
+            ->withSession(['organization_id' => $organization->id])
+            ->withHeaders(['X-Organization-ID' => $organization->id])
+            ->putJson("/api/v1/admin/reservations/{$newReservation->id}/assign", [
+                'scheduled_at' => now()->addDay()->setTime(10, 15)->toDateTimeString(),
+                'biplaceur_id' => $biplaceur->id,
+                'site_id' => $site->id,
+                'tandem_glider_id' => $tandemGlider->id,
+                'vehicle_id' => $vehicle->id,
+            ]);
 
         // Devrait être rejeté car pas assez de temps entre les vols
         $response->assertStatus(422);

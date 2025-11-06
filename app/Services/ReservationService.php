@@ -185,6 +185,8 @@ class ReservationService
         }
 
         // Valider le stage (pour rétrocompatibilité, accepter aussi 'before_flight' et 'after_flight')
+        // Sauvegarder la valeur originale pour la base de données
+        $originalStage = $stage;
         $stageMapping = [
             'before_flight' => 'scheduled',
             'after_flight' => 'completed',
@@ -195,6 +197,18 @@ class ReservationService
 
         if (!in_array($stage, $validStages)) {
             throw new \Exception("Stage invalide: {$stage}. Stages valides: " . implode(', ', $validStages));
+        }
+
+        // Mapping inverse pour la base de données (qui utilise les anciennes valeurs)
+        $dbStageMapping = [
+            'scheduled' => 'before_flight',
+            'completed' => 'after_flight',
+        ];
+        // Utiliser la valeur originale si elle existe dans le mapping, sinon utiliser le stage mappé
+        $dbStage = $dbStageMapping[$stage] ?? $originalStage ?? $stage;
+        // Si le stage original était 'before_flight' ou 'after_flight', l'utiliser directement
+        if (in_array($originalStage, ['before_flight', 'after_flight', 'initial'])) {
+            $dbStage = $originalStage;
         }
 
         DB::beginTransaction();
@@ -208,10 +222,10 @@ class ReservationService
                 $unitPrice = $option->calculatePrice($reservation->participants_count);
                 $totalPrice = $unitPrice * $quantity;
 
-                // Vérifier si l'option existe déjà à ce stade
+                // Vérifier si l'option existe déjà à ce stade (utiliser le stage DB pour la recherche)
                 $existing = $reservation->options()
                     ->wherePivot('option_id', $option->id)
-                    ->wherePivot('added_at_stage', $stage)
+                    ->wherePivot('added_at_stage', $dbStage)
                     ->first();
 
                 if ($existing) {
@@ -222,12 +236,12 @@ class ReservationService
                             'total_price' => $totalPrice,
                         ], false);
                 } else {
-                    // Ajouter l'option
+                    // Ajouter l'option (utiliser le stage DB pour l'insertion)
                     $reservation->options()->attach($option->id, [
                         'quantity' => $quantity,
                         'unit_price' => $unitPrice,
                         'total_price' => $totalPrice,
-                        'added_at_stage' => $stage,
+                        'added_at_stage' => $dbStage,
                         'added_at' => now(),
                     ]);
                 }

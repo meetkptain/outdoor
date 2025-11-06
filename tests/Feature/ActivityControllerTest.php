@@ -35,7 +35,10 @@ class ActivityControllerTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->getJson('/api/v1/activities');
+        // Définir le contexte d'organisation via header et session
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/activities');
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -62,7 +65,8 @@ class ActivityControllerTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->getJson('/api/v1/activities/by-type/paragliding');
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->getJson('/api/v1/activities/by-type/paragliding');
 
         $response->assertOk()
             ->assertJsonCount(1, 'data')
@@ -103,7 +107,8 @@ class ActivityControllerTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $response = $this->getJson("/api/v1/activities/{$activity->id}");
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->getJson("/api/v1/activities/{$activity->id}");
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -123,7 +128,8 @@ class ActivityControllerTest extends TestCase
             'activity_id' => $activity->id,
         ]);
 
-        $response = $this->getJson("/api/v1/activities/{$activity->id}/sessions");
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->getJson("/api/v1/activities/{$activity->id}/sessions");
 
         $response->assertOk()
             ->assertJsonCount(2, 'data');

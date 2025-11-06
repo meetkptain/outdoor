@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\Admin;
 use App\Models\Reservation;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,11 +14,15 @@ class ReportControllerTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+    protected Organization $organization;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->organization = Organization::factory()->create();
         $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->organization->users()->attach($this->admin->id, ['role' => 'admin', 'permissions' => ['*']]);
+        $this->admin->setCurrentOrganization($this->organization);
     }
 
     /**
@@ -26,15 +31,20 @@ class ReportControllerTest extends TestCase
     public function test_admin_can_list_reports(): void
     {
         // Créer des données de test
-        Reservation::factory()->count(5)->create(['created_at' => now()]);
+        Reservation::factory()->count(5)->create([
+            'organization_id' => $this->organization->id,
+            'created_at' => now(),
+        ]);
         Payment::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
             'status' => 'succeeded',
             'captured_at' => now(),
         ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/reports?date_from=' . now()->subDays(7)->format('Y-m-d') . '&date_to=' . now()->format('Y-m-d'));
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/reports?date_from=' . now()->subDays(7)->format('Y-m-d') . '&date_to=' . now()->format('Y-m-d'));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -59,24 +69,31 @@ class ReportControllerTest extends TestCase
     {
         $today = now();
         
-        Reservation::factory()->count(3)->create(['created_at' => $today]);
+        Reservation::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
+            'created_at' => $today,
+        ]);
         Reservation::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
             'scheduled_at' => $today,
             'status' => 'scheduled',
         ]);
         Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
             'scheduled_at' => $today,
             'status' => 'completed',
         ]);
         Payment::factory()->create([
+            'organization_id' => $this->organization->id,
             'status' => 'succeeded',
             'captured_at' => $today,
             'amount' => 100.00,
         ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/reports/daily?date=' . $today->format('Y-m-d'));
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/reports/daily?date=' . $today->format('Y-m-d'));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -105,20 +122,26 @@ class ReportControllerTest extends TestCase
     {
         $thisMonth = now()->startOfMonth();
         
-        Reservation::factory()->count(10)->create(['created_at' => $thisMonth]);
+        Reservation::factory()->count(10)->create([
+            'organization_id' => $this->organization->id,
+            'created_at' => $thisMonth,
+        ]);
         Reservation::factory()->count(5)->create([
+            'organization_id' => $this->organization->id,
             'scheduled_at' => $thisMonth,
             'status' => 'completed',
         ]);
         Payment::factory()->count(5)->create([
+            'organization_id' => $this->organization->id,
             'status' => 'succeeded',
             'captured_at' => $thisMonth,
             'amount' => 150.00,
         ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/reports/monthly?year=' . now()->year . '&month=' . now()->month);
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/reports/monthly?year=' . now()->year . '&month=' . now()->month);
 
         $response->assertStatus(200)
             ->assertJsonStructure([

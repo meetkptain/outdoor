@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\Admin;
 use App\Models\Resource;
 use App\Models\Reservation;
 use App\Models\User;
+use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,11 +14,33 @@ class ResourceControllerTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+    protected Organization $organization;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->organization = Organization::factory()->create();
         $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->organization->users()->attach($this->admin->id, ['role' => 'admin', 'permissions' => ['*']]);
+        $this->admin->setCurrentOrganization($this->organization);
+    }
+
+    /**
+     * Helper pour créer une requête authentifiée avec contexte d'organisation
+     */
+    protected function authenticatedRequest(string $method, string $url, array $data = []): \Illuminate\Testing\TestResponse
+    {
+        $request = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id]);
+
+        return match(strtoupper($method)) {
+            'GET' => $request->getJson($url),
+            'POST' => $request->postJson($url, $data),
+            'PUT' => $request->putJson($url, $data),
+            'DELETE' => $request->deleteJson($url),
+            default => $request->getJson($url),
+        };
     }
 
     /**
@@ -25,11 +48,14 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_list_resources(): void
     {
-        Resource::factory()->count(5)->create();
+        Resource::factory()->count(5)->create([
+            'organization_id' => $this->organization->id,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources');
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/resources');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -53,12 +79,19 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_filter_resources_by_type(): void
     {
-        Resource::factory()->count(3)->vehicle()->create();
-        Resource::factory()->count(2)->tandemGlider()->create();
+        Resource::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
+        Resource::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'tandem_glider',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources?type=vehicle');
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/resources?type=vehicle');
 
         $response->assertStatus(200);
         $data = $response->json('data.data');
@@ -71,12 +104,19 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_filter_resources_by_active_status(): void
     {
-        Resource::factory()->count(3)->create(['is_active' => true]);
-        Resource::factory()->count(2)->create(['is_active' => false]);
+        Resource::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
+        Resource::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources?is_active=true');
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/resources?is_active=true');
 
         $response->assertStatus(200);
         $data = $response->json('data.data');
@@ -88,12 +128,21 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_search_resources(): void
     {
-        Resource::factory()->create(['name' => 'Navette Test', 'code' => 'NAV001']);
-        Resource::factory()->create(['name' => 'Autre ressource', 'code' => 'RES002']);
+        Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Navette Test',
+            'code' => 'NAV001',
+        ]);
+        Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Autre ressource',
+            'code' => 'RES002',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources?search=Test');
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/admin/resources?search=Test');
 
         $response->assertStatus(200);
         $data = $response->json('data.data');
@@ -106,12 +155,16 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_list_vehicles(): void
     {
-        Resource::factory()->count(3)->vehicle()->create();
-        Resource::factory()->count(2)->tandemGlider()->create();
+        Resource::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
+        Resource::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'tandem_glider',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources/vehicles');
+        $response = $this->authenticatedRequest('GET', '/api/v1/admin/resources/vehicles');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -135,12 +188,16 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_list_tandem_gliders(): void
     {
-        Resource::factory()->count(2)->vehicle()->create();
-        Resource::factory()->count(4)->tandemGlider()->create();
+        Resource::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
+        Resource::factory()->count(4)->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'tandem_glider',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources/tandem-gliders');
+        $response = $this->authenticatedRequest('GET', '/api/v1/admin/resources/tandem-gliders');
 
         $response->assertStatus(200);
         $data = $response->json('data');
@@ -153,12 +210,18 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_get_available_resources(): void
     {
-        $vehicle = Resource::factory()->vehicle()->create(['is_active' => true]);
-        Resource::factory()->vehicle()->create(['is_active' => false]);
+        $vehicle = Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+            'is_active' => true,
+        ]);
+        Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+            'is_active' => false,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/admin/resources/available?type=vehicle&date=' . now()->addDay()->format('Y-m-d'));
+        $response = $this->authenticatedRequest('GET', '/api/v1/admin/resources/available?type=vehicle&date=' . now()->addDay()->format('Y-m-d'));
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -184,8 +247,6 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_create_resource(): void
     {
-        $this->actingAs($this->admin, 'sanctum');
-
         $data = [
             'code' => 'NAV001',
             'name' => 'Navette Test',
@@ -198,7 +259,7 @@ class ResourceControllerTest extends TestCase
             'is_active' => true,
         ];
 
-        $response = $this->postJson('/api/v1/admin/resources', $data);
+        $response = $this->authenticatedRequest('POST', '/api/v1/admin/resources', $data);
 
         $response->assertStatus(201)
             ->assertJsonStructure([
@@ -224,9 +285,7 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_cannot_create_resource_with_invalid_data(): void
     {
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->postJson('/api/v1/admin/resources', [
+        $response = $this->authenticatedRequest('POST', '/api/v1/admin/resources', [
             'code' => '', // Code requis
             'type' => 'invalid_type', // Type invalide
         ]);
@@ -240,11 +299,12 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_get_resource_details(): void
     {
-        $resource = Resource::factory()->vehicle()->create();
+        $resource = Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson("/api/v1/admin/resources/{$resource->id}");
+        $response = $this->authenticatedRequest('GET', "/api/v1/admin/resources/{$resource->id}");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -271,11 +331,12 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_update_resource(): void
     {
-        $resource = Resource::factory()->vehicle()->create();
+        $resource = Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->putJson("/api/v1/admin/resources/{$resource->id}", [
+        $response = $this->authenticatedRequest('PUT', "/api/v1/admin/resources/{$resource->id}", [
             'name' => 'Navette Modifiée',
             'description' => 'Nouvelle description',
         ]);
@@ -297,11 +358,12 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_can_delete_resource_without_reservations(): void
     {
-        $resource = Resource::factory()->vehicle()->create();
+        $resource = Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->deleteJson("/api/v1/admin/resources/{$resource->id}");
+        $response = $this->authenticatedRequest('DELETE', "/api/v1/admin/resources/{$resource->id}");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -317,12 +379,16 @@ class ResourceControllerTest extends TestCase
      */
     public function test_admin_cannot_delete_resource_with_reservations(): void
     {
-        $vehicle = Resource::factory()->vehicle()->create();
-        $reservation = Reservation::factory()->create(['vehicle_id' => $vehicle->id]);
+        $vehicle = Resource::factory()->create([
+            'organization_id' => $this->organization->id,
+            'type' => 'vehicle',
+        ]);
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'vehicle_id' => $vehicle->id,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->deleteJson("/api/v1/admin/resources/{$vehicle->id}");
+        $response = $this->authenticatedRequest('DELETE', "/api/v1/admin/resources/{$vehicle->id}");
 
         $response->assertStatus(200)
             ->assertJson([

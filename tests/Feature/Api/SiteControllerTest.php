@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Site;
 use App\Models\Reservation;
 use App\Models\User;
+use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,11 +15,15 @@ class SiteControllerTest extends TestCase
 
     protected User $admin;
     protected User $client;
+    protected Organization $organization;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->organization = Organization::factory()->create();
         $this->admin = User::factory()->create(['role' => 'admin']);
+        $this->organization->users()->attach($this->admin->id, ['role' => 'admin', 'permissions' => ['*']]);
+        $this->admin->setCurrentOrganization($this->organization);
         $this->client = User::factory()->create(['role' => 'client']);
     }
 
@@ -27,10 +32,18 @@ class SiteControllerTest extends TestCase
      */
     public function test_public_can_list_sites(): void
     {
-        Site::factory()->count(5)->create(['is_active' => true]);
-        Site::factory()->count(2)->create(['is_active' => false]);
+        Site::factory()->count(5)->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
+        Site::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
 
-        $response = $this->getJson('/api/v1/sites');
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/sites');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -59,12 +72,19 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_can_see_all_sites(): void
     {
-        Site::factory()->count(3)->create(['is_active' => true]);
-        Site::factory()->count(2)->create(['is_active' => false]);
+        Site::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
+        Site::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson('/api/v1/sites?is_active=false');
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/sites?is_active=false');
 
         $response->assertStatus(200);
         $data = $response->json('data.data');
@@ -76,10 +96,20 @@ class SiteControllerTest extends TestCase
      */
     public function test_can_filter_sites_by_difficulty(): void
     {
-        Site::factory()->count(3)->create(['difficulty_level' => 'beginner', 'is_active' => true]);
-        Site::factory()->count(2)->create(['difficulty_level' => 'advanced', 'is_active' => true]);
+        Site::factory()->count(3)->create([
+            'organization_id' => $this->organization->id,
+            'difficulty_level' => 'beginner',
+            'is_active' => true,
+        ]);
+        Site::factory()->count(2)->create([
+            'organization_id' => $this->organization->id,
+            'difficulty_level' => 'advanced',
+            'is_active' => true,
+        ]);
 
-        $response = $this->getJson('/api/v1/sites?difficulty_level=beginner');
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/sites?difficulty_level=beginner');
 
         $response->assertStatus(200);
         $data = $response->json('data.data');
@@ -92,10 +122,22 @@ class SiteControllerTest extends TestCase
      */
     public function test_can_search_sites(): void
     {
-        Site::factory()->create(['name' => 'Site Test', 'code' => 'SITE001', 'is_active' => true]);
-        Site::factory()->create(['name' => 'Autre site', 'code' => 'SITE002', 'is_active' => true]);
+        Site::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Site Test',
+            'code' => 'SITE001',
+            'is_active' => true,
+        ]);
+        Site::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Autre site',
+            'code' => 'SITE002',
+            'is_active' => true,
+        ]);
 
-        $response = $this->getJson('/api/v1/sites?search=Test');
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson('/api/v1/sites?search=Test');
 
         $response->assertStatus(200);
         $data = $response->json('data.data');
@@ -108,9 +150,14 @@ class SiteControllerTest extends TestCase
      */
     public function test_public_can_view_active_site(): void
     {
-        $site = Site::factory()->create(['is_active' => true]);
+        $site = Site::factory()->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
 
-        $response = $this->getJson("/api/v1/sites/{$site->id}");
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson("/api/v1/sites/{$site->id}");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -140,9 +187,14 @@ class SiteControllerTest extends TestCase
      */
     public function test_public_cannot_view_inactive_site(): void
     {
-        $site = Site::factory()->create(['is_active' => false]);
+        $site = Site::factory()->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
 
-        $response = $this->getJson("/api/v1/sites/{$site->id}");
+        $response = $this->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson("/api/v1/sites/{$site->id}");
 
         $response->assertStatus(404)
             ->assertJson([
@@ -156,11 +208,15 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_can_view_inactive_site(): void
     {
-        $site = Site::factory()->create(['is_active' => false]);
+        $site = Site::factory()->create([
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->getJson("/api/v1/sites/{$site->id}");
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->getJson("/api/v1/sites/{$site->id}");
 
         $response->assertStatus(200);
     }
@@ -170,8 +226,6 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_can_create_site(): void
     {
-        $this->actingAs($this->admin, 'sanctum');
-
         $data = [
             'code' => 'SITE001',
             'name' => 'Site de Test',
@@ -185,7 +239,10 @@ class SiteControllerTest extends TestCase
             'is_active' => true,
         ];
 
-        $response = $this->postJson('/api/v1/sites', $data);
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->postJson('/api/v1/sites', $data);
 
         $response->assertStatus(201)
             ->assertJsonStructure([
@@ -210,14 +267,15 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_cannot_create_site_with_invalid_data(): void
     {
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->postJson('/api/v1/sites', [
-            'code' => '', // Code requis
-            'name' => '', // Name requis
-            'latitude' => 100, // Latitude invalide (> 90)
-            'difficulty_level' => 'invalid', // Difficulté invalide
-        ]);
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->postJson('/api/v1/sites', [
+                'code' => '', // Code requis
+                'name' => '', // Name requis
+                'latitude' => 100, // Latitude invalide (> 90)
+                'difficulty_level' => 'invalid', // Difficulté invalide
+            ]);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['code', 'name', 'latitude', 'location', 'longitude', 'altitude', 'difficulty_level']);
@@ -228,14 +286,17 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_can_update_site(): void
     {
-        $site = Site::factory()->create();
-
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->putJson("/api/v1/sites/{$site->id}", [
-            'name' => 'Site Modifié',
-            'description' => 'Nouvelle description',
+        $site = Site::factory()->create([
+            'organization_id' => $this->organization->id,
         ]);
+
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->putJson("/api/v1/sites/{$site->id}", [
+                'name' => 'Site Modifié',
+                'description' => 'Nouvelle description',
+            ]);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -254,11 +315,14 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_can_delete_site_without_reservations(): void
     {
-        $site = Site::factory()->create();
+        $site = Site::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->deleteJson("/api/v1/sites/{$site->id}");
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->deleteJson("/api/v1/sites/{$site->id}");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -274,12 +338,18 @@ class SiteControllerTest extends TestCase
      */
     public function test_admin_cannot_delete_site_with_reservations(): void
     {
-        $site = Site::factory()->create();
-        $reservation = Reservation::factory()->create(['site_id' => $site->id]);
+        $site = Site::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $reservation = Reservation::factory()->create([
+            'organization_id' => $this->organization->id,
+            'site_id' => $site->id,
+        ]);
 
-        $this->actingAs($this->admin, 'sanctum');
-
-        $response = $this->deleteJson("/api/v1/sites/{$site->id}");
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
+            ->deleteJson("/api/v1/sites/{$site->id}");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -298,9 +368,9 @@ class SiteControllerTest extends TestCase
      */
     public function test_non_admin_cannot_create_site(): void
     {
-        $this->actingAs($this->client, 'sanctum');
-
-        $response = $this->postJson('/api/v1/sites', [
+        $response = $this->actingAs($this->client, 'sanctum')
+            ->withSession(['organization_id' => $this->organization->id])
+            ->postJson('/api/v1/sites', [
             'code' => 'SITE001',
             'name' => 'Test',
             'location' => 'Paris',
