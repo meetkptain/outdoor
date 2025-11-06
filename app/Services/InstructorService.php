@@ -5,11 +5,20 @@ namespace App\Services;
 use App\Models\Instructor;
 use App\Models\ActivitySession;
 use App\Models\Reservation;
+use App\Modules\ModuleRegistry;
+use App\Modules\ModuleHook;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 
 class InstructorService
 {
+    protected ModuleRegistry $moduleRegistry;
+
+    public function __construct(ModuleRegistry $moduleRegistry)
+    {
+        $this->moduleRegistry = $moduleRegistry;
+    }
+
     /**
      * Récupérer les sessions du jour pour un instructeur
      */
@@ -67,6 +76,16 @@ class InstructorService
         $session->update([
             'status' => 'completed',
         ]);
+
+        // Hook: Après complétion de session
+        $activity = $session->activity;
+        if ($activity) {
+            $module = $this->moduleRegistry->get($activity->activity_type);
+            if ($module) {
+                $module->afterSessionComplete($session->fresh());
+                $this->moduleRegistry->triggerHook(ModuleHook::AFTER_SESSION_COMPLETE, $activity->activity_type, $session->fresh());
+            }
+        }
 
         // Mettre à jour la réservation si toutes les sessions sont complétées
         if ($session->reservation) {

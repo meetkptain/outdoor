@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'verify.stripe.webhook' => \App\Http\Middleware\VerifyStripeWebhook::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'throttle.tenant' => \App\Http\Middleware\ThrottlePerTenant::class,
         ]);
     })
     ->withEvents(discover: [

@@ -11,6 +11,9 @@ use App\Services\StripeTerminalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @OA\Tag(name="Payments")
+ */
 class PaymentController extends Controller
 {
     protected PaymentService $paymentService;
@@ -25,7 +28,38 @@ class PaymentController extends Controller
     }
 
     /**
-     * Créer un PaymentIntent Stripe
+     * @OA\Post(
+     *     path="/api/v1/payments/intent",
+     *     summary="Créer un PaymentIntent Stripe",
+     *     description="Crée un PaymentIntent Stripe pour une réservation",
+     *     operationId="createPaymentIntent",
+     *     tags={"Payments"},
+     *     security={{"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"reservation_id", "amount", "payment_method_id", "type"},
+     *             @OA\Property(property="reservation_id", type="integer", example=1),
+     *             @OA\Property(property="amount", type="number", format="float", example=120.00, minimum=0.01),
+     *             @OA\Property(property="payment_method_id", type="string", example="pm_1234567890"),
+     *             @OA\Property(property="type", type="string", enum={"deposit", "authorization", "both"}, example="deposit")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="PaymentIntent créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="payment", ref="#/components/schemas/Payment"),
+     *                 @OA\Property(property="client_secret", type="string", example="pi_xxx_secret_xxx")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=500, description="Erreur lors de la création"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function createIntent(Request $request)
     {
@@ -78,7 +112,33 @@ class PaymentController extends Controller
     }
 
     /**
-     * Capturer un paiement autorisé
+     * @OA\Post(
+     *     path="/api/v1/payments/capture",
+     *     summary="Capturer un paiement autorisé",
+     *     description="Capture un paiement qui a été préalablement autorisé (empreinte)",
+     *     operationId="capturePayment",
+     *     tags={"Payments"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"payment_id"},
+     *             @OA\Property(property="payment_id", type="integer", example=1),
+     *             @OA\Property(property="amount", type="number", format="float", nullable=true, example=120.00, description="Montant à capturer (optionnel, capture totale si omis)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paiement capturé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Payment")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function capture(Request $request)
     {

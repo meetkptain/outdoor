@@ -8,10 +8,34 @@ use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @OA\Tag(name="Activity Sessions")
+ */
 class ActivitySessionController extends Controller
 {
     /**
-     * Liste des sessions (public ou admin)
+     * @OA\Get(
+     *     path="/api/v1/activity-sessions",
+     *     summary="Liste des sessions d'activité",
+     *     description="Retourne la liste des sessions d'activité avec filtres",
+     *     operationId="listActivitySessions",
+     *     tags={"Activity Sessions"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(name="activity_id", in="query", @OA\Schema(type="integer"), description="Filtrer par activité"),
+     *     @OA\Parameter(name="instructor_id", in="query", @OA\Schema(type="integer"), description="Filtrer par instructeur"),
+     *     @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"scheduled", "completed", "cancelled"}), description="Filtrer par statut"),
+     *     @OA\Parameter(name="start_date", in="query", @OA\Schema(type="string", format="date"), description="Date de début"),
+     *     @OA\Parameter(name="end_date", in="query", @OA\Schema(type="string", format="date"), description="Date de fin"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des sessions",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -52,7 +76,27 @@ class ActivitySessionController extends Controller
     }
 
     /**
-     * Sessions par activité
+     * @OA\Get(
+     *     path="/api/v1/activity-sessions/by-activity/{activity_id}",
+     *     summary="Sessions par activité",
+     *     description="Retourne les sessions pour une activité spécifique",
+     *     operationId="sessionsByActivity",
+     *     tags={"Activity Sessions"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(name="activity_id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\Parameter(name="start_date", in="query", @OA\Schema(type="string", format="date"), description="Date de début"),
+     *     @OA\Parameter(name="end_date", in="query", @OA\Schema(type="string", format="date"), description="Date de fin"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des sessions",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Activité non trouvée"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function byActivity(int $activityId, Request $request): JsonResponse
     {
@@ -81,7 +125,25 @@ class ActivitySessionController extends Controller
     }
 
     /**
-     * Détails d'une session
+     * @OA\Get(
+     *     path="/api/v1/activity-sessions/{id}",
+     *     summary="Détails d'une session",
+     *     description="Retourne les détails complets d'une session d'activité",
+     *     operationId="getActivitySession",
+     *     tags={"Activity Sessions"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails de la session",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Session non trouvée"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function show(int $id): JsonResponse
     {
@@ -95,7 +157,41 @@ class ActivitySessionController extends Controller
     }
 
     /**
-     * Créer une session (admin)
+     * @OA\Post(
+     *     path="/api/v1/admin/activity-sessions",
+     *     summary="Créer une session (Admin)",
+     *     description="Crée une nouvelle session d'activité",
+     *     operationId="createActivitySession",
+     *     tags={"Activity Sessions"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"activity_id", "scheduled_at"},
+     *             @OA\Property(property="activity_id", type="integer", example=1),
+     *             @OA\Property(property="reservation_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="scheduled_at", type="string", format="date-time", example="2024-12-25T10:00:00Z"),
+     *             @OA\Property(property="duration_minutes", type="integer", nullable=true, example=60, minimum=1),
+     *             @OA\Property(property="instructor_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="site_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="status", type="string", enum={"scheduled", "completed", "cancelled"}, example="scheduled"),
+     *             @OA\Property(property="metadata", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Session créée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Session créée avec succès"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Organisation ou activité non trouvée"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function store(Request $request): JsonResponse
     {
@@ -141,7 +237,39 @@ class ActivitySessionController extends Controller
     }
 
     /**
-     * Modifier une session (admin)
+     * @OA\Put(
+     *     path="/api/v1/admin/activity-sessions/{id}",
+     *     summary="Modifier une session (Admin)",
+     *     description="Met à jour une session d'activité existante",
+     *     operationId="updateActivitySession",
+     *     tags={"Activity Sessions"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="scheduled_at", type="string", format="date-time", example="2024-12-25T10:00:00Z"),
+     *             @OA\Property(property="duration_minutes", type="integer", nullable=true, example=60, minimum=1),
+     *             @OA\Property(property="instructor_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="site_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="status", type="string", enum={"scheduled", "completed", "cancelled"}, example="completed"),
+     *             @OA\Property(property="metadata", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Session mise à jour avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Session mise à jour avec succès"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Session non trouvée"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function update(Request $request, int $id): JsonResponse
     {
@@ -166,7 +294,26 @@ class ActivitySessionController extends Controller
     }
 
     /**
-     * Supprimer une session (admin)
+     * @OA\Delete(
+     *     path="/api/v1/admin/activity-sessions/{id}",
+     *     summary="Supprimer une session (Admin)",
+     *     description="Supprime une session d'activité (soft delete)",
+     *     operationId="deleteActivitySession",
+     *     tags={"Activity Sessions"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Session supprimée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Session supprimée avec succès")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Session non trouvée"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function destroy(int $id): JsonResponse
     {

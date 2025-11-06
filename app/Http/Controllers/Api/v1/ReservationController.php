@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\Option;
 
+/**
+ * @OA\Tag(name="Reservations")
+ */
 class ReservationController extends Controller
 {
     public function __construct(
@@ -18,7 +21,50 @@ class ReservationController extends Controller
     ) {}
 
     /**
-     * Créer une nouvelle réservation
+     * @OA\Post(
+     *     path="/api/v1/reservations",
+     *     summary="Créer une nouvelle réservation",
+     *     description="Crée une réservation pour une activité (paragliding, surfing, etc.)",
+     *     operationId="createReservation",
+     *     tags={"Reservations"},
+     *     security={{"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"customer_email", "customer_first_name", "customer_last_name", "activity_id", "participants_count", "payment_method_id"},
+     *             @OA\Property(property="customer_email", type="string", format="email", example="john.doe@example.com"),
+     *             @OA\Property(property="customer_first_name", type="string", example="John"),
+     *             @OA\Property(property="customer_last_name", type="string", example="Doe"),
+     *             @OA\Property(property="customer_phone", type="string", nullable=true, example="+33612345678"),
+     *             @OA\Property(property="customer_birth_date", type="string", format="date", nullable=true, example="1990-01-15"),
+     *             @OA\Property(property="customer_weight", type="integer", nullable=true, example=75, minimum=30, maximum=150),
+     *             @OA\Property(property="customer_height", type="integer", nullable=true, example=175, minimum=100, maximum=250),
+     *             @OA\Property(property="activity_id", type="integer", example=1, description="ID de l'activité (remplace flight_type)"),
+     *             @OA\Property(property="participants_count", type="integer", example=1, minimum=1, maximum=10),
+     *             @OA\Property(property="options", type="array", nullable=true,
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="quantity", type="integer", example=1)
+     *                 )
+     *             ),
+     *             @OA\Property(property="coupon_code", type="string", nullable=true, example="SUMMER2024"),
+     *             @OA\Property(property="gift_card_code", type="string", nullable=true),
+     *             @OA\Property(property="special_requests", type="string", nullable=true),
+     *             @OA\Property(property="payment_type", type="string", enum={"deposit", "authorization", "both"}, example="deposit"),
+     *             @OA\Property(property="payment_method_id", type="string", example="pm_1234567890", description="Stripe PaymentMethod ID")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Réservation créée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Reservation")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function store(Request $request): JsonResponse
     {

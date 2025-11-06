@@ -9,6 +9,9 @@ use App\Models\Reservation;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @OA\Tag(name="Reservations")
+ */
 class ReservationAdminController extends Controller
 {
     public function __construct(
@@ -19,7 +22,31 @@ class ReservationAdminController extends Controller
     }
 
     /**
-     * Liste des réservations avec filtres
+     * @OA\Get(
+     *     path="/api/v1/admin/reservations",
+     *     summary="Liste des réservations (Admin)",
+     *     description="Retourne la liste des réservations avec filtres et pagination",
+     *     operationId="adminListReservations",
+     *     tags={"Reservations"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="status", in="query", @OA\Schema(type="string"), description="Filtrer par statut"),
+     *     @OA\Parameter(name="activity_type", in="query", @OA\Schema(type="string"), description="Filtrer par type d'activité"),
+     *     @OA\Parameter(name="instructor_id", in="query", @OA\Schema(type="integer"), description="Filtrer par instructeur"),
+     *     @OA\Parameter(name="date_from", in="query", @OA\Schema(type="string", format="date"), description="Date de début"),
+     *     @OA\Parameter(name="date_to", in="query", @OA\Schema(type="string", format="date"), description="Date de fin"),
+     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Recherche (email, nom, UUID)"),
+     *     @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Nombre d'éléments par page"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des réservations",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -74,7 +101,26 @@ class ReservationAdminController extends Controller
     }
 
     /**
-     * Détails d'une réservation
+     * @OA\Get(
+     *     path="/api/v1/admin/reservations/{id}",
+     *     summary="Détails d'une réservation (Admin)",
+     *     description="Retourne les détails complets d'une réservation",
+     *     operationId="adminGetReservation",
+     *     tags={"Reservations"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails de la réservation",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Reservation")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Réservation non trouvée"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function show(int $id): JsonResponse
     {
@@ -162,7 +208,38 @@ class ReservationAdminController extends Controller
     }
 
     /**
-     * Assigner date et ressources (ancienne méthode, gardée pour compatibilité)
+     * @OA\Post(
+     *     path="/api/v1/admin/reservations/{id}/assign",
+     *     summary="Assigner date et ressources à une réservation",
+     *     description="Planifie une réservation en assignant un instructeur, un site et des équipements",
+     *     operationId="assignReservation",
+     *     tags={"Reservations"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"scheduled_at", "instructor_id"},
+     *             @OA\Property(property="scheduled_at", type="string", format="date-time", example="2024-12-25T10:00:00Z"),
+     *             @OA\Property(property="instructor_id", type="integer", example=1),
+     *             @OA\Property(property="site_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="equipment_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="vehicle_id", type="integer", nullable=true, example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Réservation assignée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Reservation")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Erreur lors de l'assignation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function assign(Request $request, int $id): JsonResponse
     {
@@ -203,7 +280,40 @@ class ReservationAdminController extends Controller
     }
 
     /**
-     * Ajouter des options (admin)
+     * @OA\Post(
+     *     path="/api/v1/admin/reservations/{id}/add-options",
+     *     summary="Ajouter des options à une réservation",
+     *     description="Ajoute des options (photos, vidéos, etc.) à une réservation existante",
+     *     operationId="addReservationOptions",
+     *     tags={"Reservations"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"options"},
+     *             @OA\Property(property="options", type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="quantity", type="integer", nullable=true, example=1)
+     *                 )
+     *             ),
+     *             @OA\Property(property="stage", type="string", enum={"before_flight", "after_flight", "initial"}, nullable=true, example="before_flight")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Options ajoutées avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Reservation")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Erreur lors de l'ajout"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function addOptions(Request $request, int $id): JsonResponse
     {
@@ -236,7 +346,33 @@ class ReservationAdminController extends Controller
     }
 
     /**
-     * Capturer un paiement
+     * @OA\Post(
+     *     path="/api/v1/admin/reservations/{id}/capture",
+     *     summary="Capturer un paiement pour une réservation",
+     *     description="Capture un paiement autorisé pour une réservation spécifique",
+     *     operationId="captureReservationPayment",
+     *     tags={"Reservations"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="amount", type="number", format="float", nullable=true, example=120.00, description="Montant à capturer (optionnel, capture totale si omis)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paiement capturé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Payment")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Erreur lors de la capture"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function capture(Request $request, int $id): JsonResponse
     {

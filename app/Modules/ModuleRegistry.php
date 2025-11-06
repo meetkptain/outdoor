@@ -5,21 +5,48 @@ namespace App\Modules;
 class ModuleRegistry
 {
     protected array $modules = [];
+    protected array $hooks = [];
 
     /**
      * Enregistrer un module
      */
-    public function register(Module $module): void
+    public function register(ModuleInterface $module): void
     {
-        $this->modules[$module->getType()] = $module;
+        $this->modules[$module->getActivityType()] = $module;
+        
+        // Enregistrer les événements du module
+        $module->registerEvents();
     }
 
     /**
      * Récupérer un module par son type
      */
-    public function get(string $type): ?Module
+    public function get(string $type): ?ModuleInterface
     {
         return $this->modules[$type] ?? null;
+    }
+
+    /**
+     * Enregistrer un hook pour un module
+     */
+    public function registerHook(ModuleHook $hook, ModuleInterface $module, callable $callback): void
+    {
+        $this->hooks[$hook->value][$module->getActivityType()][] = $callback;
+    }
+
+    /**
+     * Déclencher un hook pour tous les modules concernés
+     */
+    public function triggerHook(ModuleHook $hook, string $activityType, ...$args): mixed
+    {
+        $callbacks = $this->hooks[$hook->value][$activityType] ?? [];
+        
+        $result = null;
+        foreach ($callbacks as $callback) {
+            $result = $callback(...$args);
+        }
+        
+        return $result;
     }
 
     /**

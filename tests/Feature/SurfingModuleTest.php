@@ -25,7 +25,7 @@ class SurfingModuleTest extends TestCase
         
         $module = $registry->get('surfing');
         $this->assertEquals('Surfing', $module->getName());
-        $this->assertEquals('surfing', $module->getType());
+        $this->assertEquals('surfing', $module->getActivityType());
         $this->assertEquals('1.0.0', $module->getVersion());
     }
 

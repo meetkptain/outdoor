@@ -9,11 +9,36 @@ use App\Models\ActivitySession;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @OA\Tag(name="Instructors")
+ */
 class InstructorController extends Controller
 {
     /**
-     * Liste des instructeurs (public)
-     * Peut être filtré par activity_type
+     * @OA\Get(
+     *     path="/api/v1/instructors",
+     *     summary="Liste des instructeurs",
+     *     description="Retourne la liste des instructeurs actifs, optionnellement filtrés par type d'activité",
+     *     operationId="listInstructors",
+     *     tags={"Instructors"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(
+     *         name="activity_type",
+     *         in="query",
+     *         description="Filtrer par type d'activité (paragliding, surfing, etc.)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="paragliding")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des instructeurs",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Instructor"))
+     *         )
+     *     ),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -43,7 +68,30 @@ class InstructorController extends Controller
     }
 
     /**
-     * Liste des instructeurs par type d'activité
+     * @OA\Get(
+     *     path="/api/v1/instructors/by-activity/{activity_type}",
+     *     summary="Instructeurs par type d'activité",
+     *     description="Retourne la liste des instructeurs pour un type d'activité spécifique",
+     *     operationId="instructorsByActivity",
+     *     tags={"Instructors"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(
+     *         name="activity_type",
+     *         in="path",
+     *         required=true,
+     *         description="Type d'activité",
+     *         @OA\Schema(type="string", example="paragliding")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des instructeurs",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Instructor"))
+     *         )
+     *     ),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function byActivity(string $activityType): JsonResponse
     {
@@ -59,7 +107,31 @@ class InstructorController extends Controller
     }
 
     /**
-     * Détails d'un instructeur (admin)
+     * @OA\Get(
+     *     path="/api/v1/instructors/{id}",
+     *     summary="Détails d'un instructeur",
+     *     description="Retourne les détails complets d'un instructeur (admin uniquement)",
+     *     operationId="getInstructor",
+     *     tags={"Instructors"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails de l'instructeur",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/Instructor")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Instructeur non trouvé"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function show(int $id): JsonResponse
     {

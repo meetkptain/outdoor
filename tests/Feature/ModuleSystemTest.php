@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Modules\Module;
+use App\Modules\BaseModule;
 use App\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,7 +22,7 @@ class ModuleSystemTest extends TestCase
             'constraints' => ['weight' => ['min' => 40]],
         ];
         
-        $module = new Module($config);
+        $module = new BaseModule($config);
         $registry->register($module);
 
         $this->assertTrue($registry->has('paragliding'));
@@ -33,7 +33,7 @@ class ModuleSystemTest extends TestCase
     {
         $registry = new ModuleRegistry();
         
-        $module = new Module([
+        $module = new BaseModule([
             'activity_type' => 'surfing',
             'name' => 'Surfing',
         ]);
@@ -47,7 +47,7 @@ class ModuleSystemTest extends TestCase
 
     public function test_module_can_check_features(): void
     {
-        $module = new Module([
+        $module = new BaseModule([
             'activity_type' => 'paragliding',
             'features' => [
                 'shuttles' => true,
@@ -61,7 +61,7 @@ class ModuleSystemTest extends TestCase
 
     public function test_module_can_get_constraints(): void
     {
-        $module = new Module([
+        $module = new BaseModule([
             'activity_type' => 'paragliding',
             'constraints' => [
                 'weight' => ['min' => 40, 'max' => 120],

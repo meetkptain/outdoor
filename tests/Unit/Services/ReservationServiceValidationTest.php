@@ -73,7 +73,8 @@ class ReservationServiceValidationTest extends TestCase
         ];
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Poids minimum requis: 40kg');
+        // Le message vient maintenant du module ParaglidingModule
+        $this->expectExceptionMessageMatches('/Poids.*40.*120.*parapente/i');
 
         $this->service->createReservation($data);
     }
@@ -95,7 +96,8 @@ class ReservationServiceValidationTest extends TestCase
         ];
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Poids maximum autorisé: 120kg');
+        // Le message vient maintenant du module ParaglidingModule
+        $this->expectExceptionMessageMatches('/Poids.*40.*120.*parapente/i');
 
         $this->service->createReservation($data);
     }
@@ -117,7 +119,8 @@ class ReservationServiceValidationTest extends TestCase
         ];
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Taille minimum requise: 140cm');
+        // Le message vient maintenant du module ParaglidingModule
+        $this->expectExceptionMessageMatches('/Taille.*140.*250.*parapente/i');
 
         $this->service->createReservation($data);
     }

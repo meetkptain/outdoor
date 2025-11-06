@@ -10,6 +10,7 @@ use App\Models\Reservation;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\InstructorService;
+use App\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Illuminate\Support\Facades\Hash;
@@ -30,7 +31,8 @@ class InstructorServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new InstructorService();
+        $moduleRegistry = app(ModuleRegistry::class);
+        $this->service = new InstructorService($moduleRegistry);
 
         // Créer une organisation
         $this->organization = Organization::factory()->create();

@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @OA\Tag(name="Authentication")
+ */
 class AuthController extends Controller
 {
     protected ClientService $clientService;
@@ -19,7 +22,41 @@ class AuthController extends Controller
     }
 
     /**
-     * Enregistrement d'un nouveau client
+     * @OA\Post(
+     *     path="/api/v1/auth/register",
+     *     summary="Enregistrement d'un nouveau client",
+     *     description="Crée un nouveau compte client et retourne un token d'authentification",
+     *     operationId="register",
+     *     tags={"Authentication"},
+     *     security={{"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="name", type="string", example="John Doe"),
+     *             @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123", minLength=8),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
+     *             @OA\Property(property="phone", type="string", nullable=true, example="+33612345678"),
+     *             @OA\Property(property="weight", type="integer", nullable=true, example=75, minimum=30, maximum=200),
+     *             @OA\Property(property="height", type="integer", nullable=true, example=175, minimum=100, maximum=250)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Compte créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", type="object"),
+     *                 @OA\Property(property="client", type="object"),
+     *                 @OA\Property(property="token", type="string", example="1|abcdef123456...")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function register(Request $request)
     {
@@ -75,7 +112,35 @@ class AuthController extends Controller
     }
 
     /**
-     * Connexion
+     * @OA\Post(
+     *     path="/api/v1/auth/login",
+     *     summary="Connexion",
+     *     description="Authentifie un utilisateur et retourne un token Bearer",
+     *     operationId="login",
+     *     tags={"Authentication"},
+     *     security={{"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email", "password"},
+     *             @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Connexion réussie",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", type="object"),
+     *                 @OA\Property(property="token", type="string", example="1|abcdef123456...")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Identifiants invalides"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function login(Request $request)
     {
@@ -157,6 +222,27 @@ class AuthController extends Controller
 
     /**
      * Profil utilisateur actuel
+     */
+    /**
+     * @OA\Get(
+     *     path="/api/v1/auth/me",
+     *     summary="Informations de l'utilisateur connecté",
+     *     description="Retourne les informations de l'utilisateur authentifié",
+     *     operationId="me",
+     *     tags={"Authentication"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Informations utilisateur",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", type="object")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Non authentifié")
+     * )
      */
     public function me(Request $request)
     {

@@ -21,6 +21,11 @@ class ActivitySessionControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        
+        // Utiliser le driver array pour le cache dans les tests (plus rapide et pas besoin de table)
+        config(['cache.default' => 'array']);
+        \Illuminate\Support\Facades\Cache::flush();
+        
         $this->organization = Organization::factory()->create();
         $this->admin = User::factory()->create();
         $this->organization->users()->attach($this->admin->id, ['role' => 'admin', 'permissions' => ['*']]);

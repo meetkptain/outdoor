@@ -12,6 +12,14 @@ class StripeConnectTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Utiliser le driver array pour le cache dans les tests (plus rapide et pas besoin de table)
+        config(['cache.default' => 'array']);
+        \Illuminate\Support\Facades\Cache::flush();
+    }
+
     public function test_admin_can_create_stripe_connect_account(): void
     {
         $organization = Organization::factory()->create(['billing_email' => 'billing@test.com']);

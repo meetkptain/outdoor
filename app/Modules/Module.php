@@ -2,6 +2,14 @@
 
 namespace App\Modules;
 
+/**
+ * @deprecated Utiliser BaseModule ou étendre BaseModule pour créer un module personnalisé.
+ * Cette classe est conservée pour rétrocompatibilité mais sera supprimée dans une future version.
+ * 
+ * Migration :
+ * - Avant : new Module($config)
+ * - Après : new BaseModule($config) ou new MonModule($config) extends BaseModule
+ */
 class Module
 {
     protected array $config;

@@ -1,0 +1,4436 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "SaaS Multi-Niche API",
+        "description": "API RESTful pour système de réservation multi-niche (paragliding, surfing, diving, etc.)",
+        "contact": {
+            "email": "support@example.com"
+        },
+        "license": {
+            "name": "Proprietary"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "API Server (Développement)"
+        },
+        {
+            "url": "https://api.example.com",
+            "description": "API Server (Production)"
+        }
+    ],
+    "paths": {
+        "/api/v1/activities": {
+            "get": {
+                "tags": [
+                    "Activities"
+                ],
+                "summary": "Liste des activités",
+                "description": "Retourne la liste des activités disponibles (paragliding, surfing, etc.)",
+                "operationId": "listActivities",
+                "parameters": [
+                    {
+                        "name": "activity_type",
+                        "in": "query",
+                        "description": "Filtrer par type d'activité",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "paragliding"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des activités",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Activity"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Organisation non trouvée"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/activity-sessions": {
+            "get": {
+                "tags": [
+                    "Activity Sessions"
+                ],
+                "summary": "Liste des sessions d'activité",
+                "description": "Retourne la liste des sessions d'activité avec filtres",
+                "operationId": "listActivitySessions",
+                "parameters": [
+                    {
+                        "name": "activity_id",
+                        "in": "query",
+                        "description": "Filtrer par activité",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "instructor_id",
+                        "in": "query",
+                        "description": "Filtrer par instructeur",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrer par statut",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "scheduled",
+                                "completed",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Date de début",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "Date de fin",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des sessions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/activity-sessions/by-activity/{activity_id}": {
+            "get": {
+                "tags": [
+                    "Activity Sessions"
+                ],
+                "summary": "Sessions par activité",
+                "description": "Retourne les sessions pour une activité spécifique",
+                "operationId": "sessionsByActivity",
+                "parameters": [
+                    {
+                        "name": "activity_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Date de début",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "Date de fin",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des sessions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Activité non trouvée"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/activity-sessions/{id}": {
+            "get": {
+                "tags": [
+                    "Activity Sessions"
+                ],
+                "summary": "Détails d'une session",
+                "description": "Retourne les détails complets d'une session d'activité",
+                "operationId": "getActivitySession",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de la session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session non trouvée"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/activity-sessions": {
+            "post": {
+                "tags": [
+                    "Activity Sessions"
+                ],
+                "summary": "Créer une session (Admin)",
+                "description": "Crée une nouvelle session d'activité",
+                "operationId": "createActivitySession",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "activity_id",
+                                    "scheduled_at"
+                                ],
+                                "properties": {
+                                    "activity_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "reservation_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2024-12-25T10:00:00Z"
+                                    },
+                                    "duration_minutes": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 60,
+                                        "nullable": true
+                                    },
+                                    "instructor_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "site_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "scheduled",
+                                            "completed",
+                                            "cancelled"
+                                        ],
+                                        "example": "scheduled"
+                                    },
+                                    "metadata": {
+                                        "type": "object",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Session créée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Session créée avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Organisation ou activité non trouvée"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/activity-sessions/{id}": {
+            "put": {
+                "tags": [
+                    "Activity Sessions"
+                ],
+                "summary": "Modifier une session (Admin)",
+                "description": "Met à jour une session d'activité existante",
+                "operationId": "updateActivitySession",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2024-12-25T10:00:00Z"
+                                    },
+                                    "duration_minutes": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 60,
+                                        "nullable": true
+                                    },
+                                    "instructor_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "site_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "scheduled",
+                                            "completed",
+                                            "cancelled"
+                                        ],
+                                        "example": "completed"
+                                    },
+                                    "metadata": {
+                                        "type": "object",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Session mise à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Session mise à jour avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session non trouvée"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Activity Sessions"
+                ],
+                "summary": "Supprimer une session (Admin)",
+                "description": "Supprime une session d'activité (soft delete)",
+                "operationId": "deleteActivitySession",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session supprimée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Session supprimée avec succès"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session non trouvée"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/reservations": {
+            "get": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Liste des réservations (Admin)",
+                "description": "Retourne la liste des réservations avec filtres et pagination",
+                "operationId": "adminListReservations",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrer par statut",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "activity_type",
+                        "in": "query",
+                        "description": "Filtrer par type d'activité",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "instructor_id",
+                        "in": "query",
+                        "description": "Filtrer par instructeur",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Date de début",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Date de fin",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Recherche (email, nom, UUID)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des réservations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/reservations/{id}": {
+            "get": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Détails d'une réservation (Admin)",
+                "description": "Retourne les détails complets d'une réservation",
+                "operationId": "adminGetReservation",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de la réservation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Reservation"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Réservation non trouvée"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/reservations/{id}/assign": {
+            "post": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Assigner date et ressources à une réservation",
+                "description": "Planifie une réservation en assignant un instructeur, un site et des équipements",
+                "operationId": "assignReservation",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "scheduled_at",
+                                    "instructor_id"
+                                ],
+                                "properties": {
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2024-12-25T10:00:00Z"
+                                    },
+                                    "instructor_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "site_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "equipment_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "vehicle_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Réservation assignée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Reservation"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur lors de l'assignation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/reservations/{id}/add-options": {
+            "post": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Ajouter des options à une réservation",
+                "description": "Ajoute des options (photos, vidéos, etc.) à une réservation existante",
+                "operationId": "addReservationOptions",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "options"
+                                ],
+                                "properties": {
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "integer",
+                                                    "example": 1,
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "stage": {
+                                        "type": "string",
+                                        "enum": [
+                                            "before_flight",
+                                            "after_flight",
+                                            "initial"
+                                        ],
+                                        "example": "before_flight",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Options ajoutées avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Reservation"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur lors de l'ajout"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/reservations/{id}/capture": {
+            "post": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Capturer un paiement pour une réservation",
+                "description": "Capture un paiement autorisé pour une réservation spécifique",
+                "operationId": "captureReservationPayment",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "amount": {
+                                        "description": "Montant à capturer (optionnel, capture totale si omis)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 120,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paiement capturé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Payment"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur lors de la capture"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Enregistrement d'un nouveau client",
+                "description": "Crée un nouveau compte client et retourne un token d'authentification",
+                "operationId": "register",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john.doe@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8,
+                                        "example": "password123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+33612345678",
+                                        "nullable": true
+                                    },
+                                    "weight": {
+                                        "type": "integer",
+                                        "maximum": 200,
+                                        "minimum": 30,
+                                        "example": 75,
+                                        "nullable": true
+                                    },
+                                    "height": {
+                                        "type": "integer",
+                                        "maximum": 250,
+                                        "minimum": 100,
+                                        "example": 175,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Compte créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "type": "object"
+                                                },
+                                                "client": {
+                                                    "type": "object"
+                                                },
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|abcdef123456..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Connexion",
+                "description": "Authentifie un utilisateur et retourne un token Bearer",
+                "operationId": "login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john.doe@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connexion réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "type": "object"
+                                                },
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|abcdef123456..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Identifiants invalides"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Informations de l'utilisateur connecté",
+                "description": "Retourne les informations de l'utilisateur authentifié",
+                "operationId": "me",
+                "responses": {
+                    "200": {
+                        "description": "Informations utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/clients": {
+            "get": {
+                "tags": [
+                    "Clients"
+                ],
+                "summary": "Liste des clients (Admin)",
+                "description": "Retourne la liste des clients avec filtres et pagination",
+                "operationId": "listClients",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Recherche (nom, email)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filtrer par statut actif",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des clients",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Clients"
+                ],
+                "summary": "Créer un client (Admin)",
+                "description": "Crée un nouveau client dans le système",
+                "operationId": "createClient",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john.doe@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8,
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+33612345678",
+                                        "nullable": true
+                                    },
+                                    "weight": {
+                                        "type": "integer",
+                                        "maximum": 200,
+                                        "minimum": 30,
+                                        "example": 75,
+                                        "nullable": true
+                                    },
+                                    "height": {
+                                        "type": "integer",
+                                        "maximum": 250,
+                                        "minimum": 100,
+                                        "example": 175,
+                                        "nullable": true
+                                    },
+                                    "medical_notes": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Client créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Client créé avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/clients/{id}": {
+            "get": {
+                "tags": [
+                    "Clients"
+                ],
+                "summary": "Détails d'un client (Admin)",
+                "description": "Retourne les détails complets d'un client",
+                "operationId": "getClient",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails du client",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Client non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Clients"
+                ],
+                "summary": "Modifier un client (Admin)",
+                "description": "Met à jour les informations d'un client",
+                "operationId": "updateClient",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john.doe@example.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+33612345678",
+                                        "nullable": true
+                                    },
+                                    "weight": {
+                                        "type": "integer",
+                                        "maximum": 200,
+                                        "minimum": 30,
+                                        "example": 75,
+                                        "nullable": true
+                                    },
+                                    "height": {
+                                        "type": "integer",
+                                        "maximum": 250,
+                                        "minimum": 100,
+                                        "example": 175,
+                                        "nullable": true
+                                    },
+                                    "medical_notes": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Client mis à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Client mis à jour avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Client non trouvé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/clients/{id}/history": {
+            "get": {
+                "tags": [
+                    "Clients"
+                ],
+                "summary": "Historique d'un client (Admin)",
+                "description": "Retourne l'historique complet des réservations d'un client",
+                "operationId": "getClientHistory",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique du client",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Reservation"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Client non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/coupons": {
+            "get": {
+                "tags": [
+                    "Coupons"
+                ],
+                "summary": "Liste des coupons (Admin)",
+                "description": "Retourne la liste des coupons avec filtres et pagination",
+                "operationId": "listCoupons",
+                "parameters": [
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filtrer par statut actif",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des coupons",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Coupons"
+                ],
+                "summary": "Créer un coupon (Admin)",
+                "description": "Crée un nouveau coupon de réduction",
+                "operationId": "createCoupon",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "discount_type",
+                                    "discount_value"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "SUMMER2024"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Réduction été 2024"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "discount_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "percentage",
+                                            "fixed"
+                                        ],
+                                        "example": "percentage"
+                                    },
+                                    "discount_value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0,
+                                        "example": 10
+                                    },
+                                    "max_discount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50,
+                                        "nullable": true
+                                    },
+                                    "min_purchase_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 100,
+                                        "nullable": true
+                                    },
+                                    "valid_from": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-06-01",
+                                        "nullable": true
+                                    },
+                                    "valid_until": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-08-31",
+                                        "nullable": true
+                                    },
+                                    "usage_limit": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 100,
+                                        "nullable": true
+                                    },
+                                    "usage_limit_per_user": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "applicable_activity_types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "paragliding",
+                                            "surfing"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "is_first_time_only": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Coupon créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Coupon créé avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/coupons/{id}": {
+            "put": {
+                "tags": [
+                    "Coupons"
+                ],
+                "summary": "Modifier un coupon (Admin)",
+                "description": "Met à jour un coupon existant",
+                "operationId": "updateCoupon",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "SUMMER2024"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Réduction été 2024"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "discount_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "percentage",
+                                            "fixed"
+                                        ],
+                                        "example": "percentage"
+                                    },
+                                    "discount_value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0,
+                                        "example": 10
+                                    },
+                                    "max_discount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50,
+                                        "nullable": true
+                                    },
+                                    "min_purchase_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 100,
+                                        "nullable": true
+                                    },
+                                    "valid_from": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-06-01",
+                                        "nullable": true
+                                    },
+                                    "valid_until": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-08-31",
+                                        "nullable": true
+                                    },
+                                    "usage_limit": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 100,
+                                        "nullable": true
+                                    },
+                                    "usage_limit_per_user": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "applicable_activity_types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "paragliding"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "is_first_time_only": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Coupon mis à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Coupon mis à jour avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Coupon non trouvé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Coupons"
+                ],
+                "summary": "Supprimer un coupon (Admin)",
+                "description": "Supprime un coupon du système",
+                "operationId": "deleteCoupon",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Coupon supprimé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Coupon supprimé avec succès"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Coupon non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard principal",
+                "description": "Retourne le résumé global du dashboard (alias pour /summary)",
+                "operationId": "dashboardIndex",
+                "responses": {
+                    "200": {
+                        "description": "Résumé du dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/dashboard/stats": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Statistiques de réservations",
+                "description": "Retourne les statistiques de réservations par statut pour une période donnée",
+                "operationId": "dashboardStats",
+                "parameters": [
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Période (day, week, month, year)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "month",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month",
+                                "year"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statistiques",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/dashboard/summary": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Résumé global du dashboard",
+                "description": "Retourne un résumé complet avec statistiques, revenus et activités",
+                "operationId": "dashboardSummary",
+                "parameters": [
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Période (day, week, month, year)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "month",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month",
+                                "year"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Résumé du dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/dashboard/revenue": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Statistiques de revenus",
+                "description": "Retourne les statistiques de revenus pour une période donnée",
+                "operationId": "dashboardRevenue",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Date de début",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-01"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "Date de fin",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-12-31"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statistiques de revenus",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/giftcards/validate": {
+            "post": {
+                "tags": [
+                    "Gift Cards"
+                ],
+                "summary": "Valider un bon cadeau",
+                "description": "Vérifie la validité d'un bon cadeau et retourne son solde",
+                "operationId": "validateGiftCard",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "GIFT123456789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Bon cadeau valide",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "GIFT123456789"
+                                                },
+                                                "balance": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 100
+                                                },
+                                                "remaining_amount": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 100
+                                                },
+                                                "valid_until": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bon cadeau invalide ou expiré"
+                    },
+                    "404": {
+                        "description": "Bon cadeau introuvable"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/giftcards": {
+            "get": {
+                "tags": [
+                    "Gift Cards"
+                ],
+                "summary": "Liste des bons cadeaux (Admin)",
+                "description": "Retourne la liste des bons cadeaux avec filtres et pagination",
+                "operationId": "listGiftCards",
+                "parameters": [
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filtrer par statut actif",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Recherche par code",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des bons cadeaux",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Gift Cards"
+                ],
+                "summary": "Créer un bon cadeau (Admin)",
+                "description": "Crée un nouveau bon cadeau",
+                "operationId": "createGiftCard",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "value"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "Code personnalisé (généré automatiquement si omis)",
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "GIFT123456789",
+                                        "nullable": true
+                                    },
+                                    "value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0,
+                                        "example": 100
+                                    },
+                                    "valid_until": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-12-31",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Bon cadeau créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bon cadeau créé avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/giftcards/{id}": {
+            "put": {
+                "tags": [
+                    "Gift Cards"
+                ],
+                "summary": "Modifier un bon cadeau (Admin)",
+                "description": "Met à jour un bon cadeau existant",
+                "operationId": "updateGiftCard",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "GIFT123456789"
+                                    },
+                                    "valid_until": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-12-31",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Bon cadeau mis à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bon cadeau mis à jour avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Bon cadeau non trouvé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/instructors": {
+            "get": {
+                "tags": [
+                    "Instructors"
+                ],
+                "summary": "Liste des instructeurs",
+                "description": "Retourne la liste des instructeurs actifs, optionnellement filtrés par type d'activité",
+                "operationId": "listInstructors",
+                "parameters": [
+                    {
+                        "name": "activity_type",
+                        "in": "query",
+                        "description": "Filtrer par type d'activité (paragliding, surfing, etc.)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "paragliding"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des instructeurs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Instructor"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/instructors/by-activity/{activity_type}": {
+            "get": {
+                "tags": [
+                    "Instructors"
+                ],
+                "summary": "Instructeurs par type d'activité",
+                "description": "Retourne la liste des instructeurs pour un type d'activité spécifique",
+                "operationId": "instructorsByActivity",
+                "parameters": [
+                    {
+                        "name": "activity_type",
+                        "in": "path",
+                        "description": "Type d'activité",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "paragliding"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des instructeurs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Instructor"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/instructors/{id}": {
+            "get": {
+                "tags": [
+                    "Instructors"
+                ],
+                "summary": "Détails d'un instructeur",
+                "description": "Retourne les détails complets d'un instructeur (admin uniquement)",
+                "operationId": "getInstructor",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'instructeur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Instructor"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Instructeur non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/options": {
+            "get": {
+                "tags": [
+                    "Options"
+                ],
+                "summary": "Liste des options",
+                "description": "Retourne la liste des options disponibles (photos, vidéos, etc.)",
+                "operationId": "listOptions",
+                "responses": {
+                    "200": {
+                        "description": "Liste des options",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/options": {
+            "post": {
+                "tags": [
+                    "Options"
+                ],
+                "summary": "Créer une option (Admin)",
+                "description": "Crée une nouvelle option (photo, vidéo, souvenir, etc.)",
+                "operationId": "createOption",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "price",
+                                    "price_type",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Photos HD"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0,
+                                        "example": 25
+                                    },
+                                    "price_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "fixed",
+                                            "per_participant"
+                                        ],
+                                        "example": "fixed"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "photo",
+                                            "video",
+                                            "souvenir",
+                                            "insurance",
+                                            "transport",
+                                            "other"
+                                        ],
+                                        "example": "photo"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Option créée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Option créée avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/options/{id}": {
+            "put": {
+                "tags": [
+                    "Options"
+                ],
+                "summary": "Modifier une option (Admin)",
+                "description": "Met à jour une option existante",
+                "operationId": "updateOption",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Photos HD"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0,
+                                        "example": 25
+                                    },
+                                    "price_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "fixed",
+                                            "per_participant"
+                                        ],
+                                        "example": "fixed"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "photo",
+                                            "video",
+                                            "souvenir",
+                                            "insurance",
+                                            "transport",
+                                            "other"
+                                        ],
+                                        "example": "photo"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Option mise à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Option mise à jour avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Option non trouvée"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Options"
+                ],
+                "summary": "Supprimer une option (Admin)",
+                "description": "Supprime une option du système",
+                "operationId": "deleteOption",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Option supprimée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Option supprimée avec succès"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Option non trouvée"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/payments/intent": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Créer un PaymentIntent Stripe",
+                "description": "Crée un PaymentIntent Stripe pour une réservation",
+                "operationId": "createPaymentIntent",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reservation_id",
+                                    "amount",
+                                    "payment_method_id",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "reservation_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "minimum": 0.01,
+                                        "example": 120
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string",
+                                        "example": "pm_1234567890"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "deposit",
+                                            "authorization",
+                                            "both"
+                                        ],
+                                        "example": "deposit"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "PaymentIntent créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "payment": {
+                                                    "$ref": "#/components/schemas/Payment"
+                                                },
+                                                "client_secret": {
+                                                    "type": "string",
+                                                    "example": "pi_xxx_secret_xxx"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "500": {
+                        "description": "Erreur lors de la création"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/payments/capture": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Capturer un paiement autorisé",
+                "description": "Capture un paiement qui a été préalablement autorisé (empreinte)",
+                "operationId": "capturePayment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "payment_id"
+                                ],
+                                "properties": {
+                                    "payment_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "amount": {
+                                        "description": "Montant à capturer (optionnel, capture totale si omis)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 120,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paiement capturé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Payment"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reservations": {
+            "post": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Créer une nouvelle réservation",
+                "description": "Crée une réservation pour une activité (paragliding, surfing, etc.)",
+                "operationId": "createReservation",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "customer_email",
+                                    "customer_first_name",
+                                    "customer_last_name",
+                                    "activity_id",
+                                    "participants_count",
+                                    "payment_method_id"
+                                ],
+                                "properties": {
+                                    "customer_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john.doe@example.com"
+                                    },
+                                    "customer_first_name": {
+                                        "type": "string",
+                                        "example": "John"
+                                    },
+                                    "customer_last_name": {
+                                        "type": "string",
+                                        "example": "Doe"
+                                    },
+                                    "customer_phone": {
+                                        "type": "string",
+                                        "example": "+33612345678",
+                                        "nullable": true
+                                    },
+                                    "customer_birth_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-01-15",
+                                        "nullable": true
+                                    },
+                                    "customer_weight": {
+                                        "type": "integer",
+                                        "maximum": 150,
+                                        "minimum": 30,
+                                        "example": 75,
+                                        "nullable": true
+                                    },
+                                    "customer_height": {
+                                        "type": "integer",
+                                        "maximum": 250,
+                                        "minimum": 100,
+                                        "example": 175,
+                                        "nullable": true
+                                    },
+                                    "activity_id": {
+                                        "description": "ID de l'activité (remplace flight_type)",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "participants_count": {
+                                        "type": "integer",
+                                        "maximum": 10,
+                                        "minimum": 1,
+                                        "example": 1
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "nullable": true
+                                    },
+                                    "coupon_code": {
+                                        "type": "string",
+                                        "example": "SUMMER2024",
+                                        "nullable": true
+                                    },
+                                    "gift_card_code": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "special_requests": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "payment_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "deposit",
+                                            "authorization",
+                                            "both"
+                                        ],
+                                        "example": "deposit"
+                                    },
+                                    "payment_method_id": {
+                                        "description": "Stripe PaymentMethod ID",
+                                        "type": "string",
+                                        "example": "pm_1234567890"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Réservation créée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Reservation"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sites": {
+            "get": {
+                "tags": [
+                    "Sites"
+                ],
+                "summary": "Liste des sites",
+                "description": "Retourne la liste des sites de décollage/activité avec filtres",
+                "operationId": "listSites",
+                "parameters": [
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filtrer par statut actif (admin uniquement)",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "difficulty_level",
+                        "in": "query",
+                        "description": "Filtrer par niveau de difficulté",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "beginner",
+                                "intermediate",
+                                "advanced"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Recherche (nom, code, localisation)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des sites",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sites/{id}": {
+            "get": {
+                "tags": [
+                    "Sites"
+                ],
+                "summary": "Détails d'un site",
+                "description": "Retourne les détails complets d'un site",
+                "operationId": "getSite",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails du site",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Site non trouvé ou non disponible"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/sites": {
+            "post": {
+                "tags": [
+                    "Sites"
+                ],
+                "summary": "Créer un site (Admin)",
+                "description": "Crée un nouveau site de décollage/activité",
+                "operationId": "createSite",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "location",
+                                    "latitude",
+                                    "longitude",
+                                    "altitude",
+                                    "difficulty_level"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "SITE001"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Col du Poutou"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Luchon, France"
+                                    },
+                                    "latitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 90,
+                                        "minimum": -90,
+                                        "example": 42.7896
+                                    },
+                                    "longitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 180,
+                                        "minimum": -180,
+                                        "example": 0.5937
+                                    },
+                                    "altitude": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "example": 1800
+                                    },
+                                    "difficulty_level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "beginner",
+                                            "intermediate",
+                                            "advanced"
+                                        ],
+                                        "example": "intermediate"
+                                    },
+                                    "orientation": {
+                                        "type": "string",
+                                        "enum": [
+                                            "N",
+                                            "NE",
+                                            "E",
+                                            "SE",
+                                            "S",
+                                            "SW",
+                                            "W",
+                                            "NW",
+                                            "multi"
+                                        ],
+                                        "example": "SW",
+                                        "nullable": true
+                                    },
+                                    "wind_conditions": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "nullable": true
+                                    },
+                                    "landing_zone_info": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "seasonal_availability": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Site créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Site créé avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/sites/{id}": {
+            "put": {
+                "tags": [
+                    "Sites"
+                ],
+                "summary": "Modifier un site (Admin)",
+                "description": "Met à jour un site existant",
+                "operationId": "updateSite",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "SITE001"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Col du Poutou"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Luchon, France"
+                                    },
+                                    "latitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 90,
+                                        "minimum": -90,
+                                        "example": 42.7896
+                                    },
+                                    "longitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 180,
+                                        "minimum": -180,
+                                        "example": 0.5937
+                                    },
+                                    "altitude": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "example": 1800
+                                    },
+                                    "difficulty_level": {
+                                        "type": "string",
+                                        "enum": [
+                                            "beginner",
+                                            "intermediate",
+                                            "advanced"
+                                        ],
+                                        "example": "intermediate"
+                                    },
+                                    "orientation": {
+                                        "type": "string",
+                                        "enum": [
+                                            "N",
+                                            "NE",
+                                            "E",
+                                            "SE",
+                                            "S",
+                                            "SW",
+                                            "W",
+                                            "NW",
+                                            "multi"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "wind_conditions": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "nullable": true
+                                    },
+                                    "landing_zone_info": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "seasonal_availability": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Site mis à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Site mis à jour avec succès"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Site non trouvé"
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Sites"
+                ],
+                "summary": "Supprimer un site (Admin)",
+                "description": "Supprime un site (désactive si utilisé dans des réservations)",
+                "operationId": "deleteSite",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Site supprimé ou désactivé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Site supprimé avec succès"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Site non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    },
+                    "429": {
+                        "description": "Rate limit atteint"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    },
+                    {
+                        "organization": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Reservation": {
+                "title": "Reservation",
+                "description": "Modèle de réservation",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "activity_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "activity_type": {
+                        "type": "string",
+                        "example": "paragliding"
+                    },
+                    "customer_email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john.doe@example.com"
+                    },
+                    "customer_first_name": {
+                        "type": "string",
+                        "example": "John"
+                    },
+                    "customer_last_name": {
+                        "type": "string",
+                        "example": "Doe"
+                    },
+                    "customer_phone": {
+                        "type": "string",
+                        "example": "+33612345678",
+                        "nullable": true
+                    },
+                    "customer_weight": {
+                        "type": "integer",
+                        "example": 75,
+                        "nullable": true
+                    },
+                    "customer_height": {
+                        "type": "integer",
+                        "example": 175,
+                        "nullable": true
+                    },
+                    "participants_count": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "authorized",
+                            "scheduled",
+                            "confirmed",
+                            "completed",
+                            "cancelled",
+                            "rescheduled",
+                            "refunded"
+                        ],
+                        "example": "pending"
+                    },
+                    "scheduled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "base_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120
+                    },
+                    "options_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 25
+                    },
+                    "discount_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 10
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 135
+                    },
+                    "deposit_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 40.5
+                    },
+                    "payment_status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "authorized",
+                            "partially_captured",
+                            "captured",
+                            "failed",
+                            "refunded"
+                        ],
+                        "example": "pending"
+                    },
+                    "payment_type": {
+                        "type": "string",
+                        "enum": [
+                            "deposit",
+                            "authorization",
+                            "both"
+                        ],
+                        "example": "deposit"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Activity": {
+                "title": "Activity",
+                "description": "Modèle d'activité (paragliding, surfing, etc.)",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "organization_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "activity_type": {
+                        "type": "string",
+                        "example": "paragliding"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Vol Tandem Parapente"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "base_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "constraints_config": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "pricing_config": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Instructor": {
+                "title": "Instructor",
+                "description": "Modèle d'instructeur",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "organization_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "activity_types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "paragliding",
+                            "surfing"
+                        ]
+                    },
+                    "license_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "experience_years": {
+                        "type": "integer",
+                        "example": 5,
+                        "nullable": true
+                    },
+                    "max_sessions_per_day": {
+                        "type": "integer",
+                        "example": 8,
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "can_accept_instant_bookings": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Payment": {
+                "title": "Payment",
+                "description": "Modèle de paiement",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reservation_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "authorized",
+                            "partially_captured",
+                            "captured",
+                            "failed",
+                            "refunded"
+                        ],
+                        "example": "authorized"
+                    },
+                    "stripe_payment_intent_id": {
+                        "type": "string",
+                        "example": "pi_1234567890",
+                        "nullable": true
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "example": "card",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Error": {
+                "title": "Error",
+                "description": "Réponse d'erreur standardisée",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Erreur de validation"
+                    },
+                    "errors": {
+                        "properties": {
+                            "field": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Success": {
+                "title": "Success",
+                "description": "Réponse de succès standardisée",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "object"
+                    },
+                    "message": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Laravel Sanctum Bearer Token. Obtenez le token via /api/v1/auth/login",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            },
+            "organization": {
+                "type": "apiKey",
+                "description": "ID de l'organisation (tenant). Requis pour l'isolation multi-tenant.",
+                "name": "X-Organization-ID",
+                "in": "header"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Activities",
+            "description": "Gestion des activités (paragliding, surfing, etc.)"
+        },
+        {
+            "name": "Activity Sessions"
+        },
+        {
+            "name": "Reservations"
+        },
+        {
+            "name": "Authentication",
+            "description": "Endpoints d'authentification"
+        },
+        {
+            "name": "Clients"
+        },
+        {
+            "name": "Coupons"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Statistiques et tableaux de bord (Admin)"
+        },
+        {
+            "name": "Gift Cards"
+        },
+        {
+            "name": "Instructors",
+            "description": "Gestion des instructeurs"
+        },
+        {
+            "name": "Payments"
+        },
+        {
+            "name": "Options"
+        },
+        {
+            "name": "Sites"
+        }
+    ]
+}

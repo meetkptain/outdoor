@@ -7,6 +7,9 @@ use App\Models\GiftCard;
 use App\Services\ClientService;
 use Illuminate\Http\Request;
 
+/**
+ * @OA\Tag(name="Gift Cards")
+ */
 class GiftCardController extends Controller
 {
     protected ClientService $clientService;
@@ -17,7 +20,38 @@ class GiftCardController extends Controller
     }
 
     /**
-     * Valider un bon cadeau (public)
+     * @OA\Post(
+     *     path="/api/v1/giftcards/validate",
+     *     summary="Valider un bon cadeau",
+     *     description="Vérifie la validité d'un bon cadeau et retourne son solde",
+     *     operationId="validateGiftCard",
+     *     tags={"Gift Cards"},
+     *     security={{"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code"},
+     *             @OA\Property(property="code", type="string", example="GIFT123456789", maxLength=50)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Bon cadeau valide",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="code", type="string", example="GIFT123456789"),
+     *                 @OA\Property(property="balance", type="number", format="float", example=100.00),
+     *                 @OA\Property(property="remaining_amount", type="number", format="float", example=100.00),
+     *                 @OA\Property(property="valid_until", type="string", format="date", nullable=true)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Bon cadeau invalide ou expiré"),
+     *     @OA\Response(response=404, description="Bon cadeau introuvable"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function validate(Request $request)
     {
@@ -56,7 +90,27 @@ class GiftCardController extends Controller
     }
 
     /**
-     * Liste des bons cadeaux (admin)
+     * @OA\Get(
+     *     path="/api/v1/admin/giftcards",
+     *     summary="Liste des bons cadeaux (Admin)",
+     *     description="Retourne la liste des bons cadeaux avec filtres et pagination",
+     *     operationId="listGiftCards",
+     *     tags={"Gift Cards"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Filtrer par statut actif"),
+     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Recherche par code"),
+     *     @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Nombre d'éléments par page"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des bons cadeaux",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function index(Request $request)
     {
@@ -81,7 +135,36 @@ class GiftCardController extends Controller
     }
 
     /**
-     * Créer un bon cadeau (admin)
+     * @OA\Post(
+     *     path="/api/v1/admin/giftcards",
+     *     summary="Créer un bon cadeau (Admin)",
+     *     description="Crée un nouveau bon cadeau",
+     *     operationId="createGiftCard",
+     *     tags={"Gift Cards"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"value"},
+     *             @OA\Property(property="code", type="string", nullable=true, example="GIFT123456789", maxLength=50, description="Code personnalisé (généré automatiquement si omis)"),
+     *             @OA\Property(property="value", type="number", format="float", example=100.00, minimum=0),
+     *             @OA\Property(property="valid_until", type="string", format="date", nullable=true, example="2025-12-31"),
+     *             @OA\Property(property="is_active", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Bon cadeau créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Bon cadeau créé avec succès"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function store(Request $request)
     {
@@ -113,7 +196,36 @@ class GiftCardController extends Controller
     }
 
     /**
-     * Modifier un bon cadeau (admin)
+     * @OA\Put(
+     *     path="/api/v1/admin/giftcards/{id}",
+     *     summary="Modifier un bon cadeau (Admin)",
+     *     description="Met à jour un bon cadeau existant",
+     *     operationId="updateGiftCard",
+     *     tags={"Gift Cards"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="code", type="string", example="GIFT123456789", maxLength=50),
+     *             @OA\Property(property="valid_until", type="string", format="date", nullable=true, example="2025-12-31"),
+     *             @OA\Property(property="is_active", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Bon cadeau mis à jour avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Bon cadeau mis à jour avec succès"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Bon cadeau non trouvé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function update(Request $request, int $id)
     {

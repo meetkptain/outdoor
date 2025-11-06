@@ -8,11 +8,37 @@ use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @OA\Tag(name="Activities")
+ */
 class ActivityController extends Controller
 {
     /**
-     * Liste des activités (public)
-     * Peut être filtré par activity_type
+     * @OA\Get(
+     *     path="/api/v1/activities",
+     *     summary="Liste des activités",
+     *     description="Retourne la liste des activités disponibles (paragliding, surfing, etc.)",
+     *     operationId="listActivities",
+     *     tags={"Activities"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(
+     *         name="activity_type",
+     *         in="query",
+     *         description="Filtrer par type d'activité",
+     *         required=false,
+     *         @OA\Schema(type="string", example="paragliding")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des activités",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Activity"))
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Organisation non trouvée"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function index(Request $request): JsonResponse
     {

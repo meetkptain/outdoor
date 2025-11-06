@@ -7,10 +7,33 @@ use App\Models\Site;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @OA\Tag(name="Sites")
+ */
 class SiteController extends Controller
 {
     /**
-     * Liste des sites (public)
+     * @OA\Get(
+     *     path="/api/v1/sites",
+     *     summary="Liste des sites",
+     *     description="Retourne la liste des sites de décollage/activité avec filtres",
+     *     operationId="listSites",
+     *     tags={"Sites"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Filtrer par statut actif (admin uniquement)"),
+     *     @OA\Parameter(name="difficulty_level", in="query", @OA\Schema(type="string", enum={"beginner", "intermediate", "advanced"}), description="Filtrer par niveau de difficulté"),
+     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Recherche (nom, code, localisation)"),
+     *     @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Nombre d'éléments par page"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des sites",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -47,7 +70,25 @@ class SiteController extends Controller
     }
 
     /**
-     * Détails d'un site (public)
+     * @OA\Get(
+     *     path="/api/v1/sites/{id}",
+     *     summary="Détails d'un site",
+     *     description="Retourne les détails complets d'un site",
+     *     operationId="getSite",
+     *     tags={"Sites"},
+     *     security={{"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails du site",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Site non trouvé ou non disponible"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function show(int $id): JsonResponse
     {
@@ -71,7 +112,45 @@ class SiteController extends Controller
     }
 
     /**
-     * Créer un site (admin)
+     * @OA\Post(
+     *     path="/api/v1/admin/sites",
+     *     summary="Créer un site (Admin)",
+     *     description="Crée un nouveau site de décollage/activité",
+     *     operationId="createSite",
+     *     tags={"Sites"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code", "name", "location", "latitude", "longitude", "altitude", "difficulty_level"},
+     *             @OA\Property(property="code", type="string", example="SITE001", maxLength=50),
+     *             @OA\Property(property="name", type="string", example="Col du Poutou", maxLength=255),
+     *             @OA\Property(property="description", type="string", nullable=true),
+     *             @OA\Property(property="location", type="string", example="Luchon, France", maxLength=255),
+     *             @OA\Property(property="latitude", type="number", format="float", example=42.7896, minimum=-90, maximum=90),
+     *             @OA\Property(property="longitude", type="number", format="float", example=0.5937, minimum=-180, maximum=180),
+     *             @OA\Property(property="altitude", type="integer", example=1800, minimum=0),
+     *             @OA\Property(property="difficulty_level", type="string", enum={"beginner", "intermediate", "advanced"}, example="intermediate"),
+     *             @OA\Property(property="orientation", type="string", enum={"N", "NE", "E", "SE", "S", "SW", "W", "NW", "multi"}, nullable=true, example="SW"),
+     *             @OA\Property(property="wind_conditions", type="string", nullable=true, maxLength=500),
+     *             @OA\Property(property="landing_zone_info", type="string", nullable=true, maxLength=1000),
+     *             @OA\Property(property="is_active", type="boolean", example=true),
+     *             @OA\Property(property="seasonal_availability", type="array", nullable=true, @OA\Items(type="string"))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Site créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Site créé avec succès"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function store(Request $request): JsonResponse
     {
@@ -101,7 +180,46 @@ class SiteController extends Controller
     }
 
     /**
-     * Modifier un site (admin)
+     * @OA\Put(
+     *     path="/api/v1/admin/sites/{id}",
+     *     summary="Modifier un site (Admin)",
+     *     description="Met à jour un site existant",
+     *     operationId="updateSite",
+     *     tags={"Sites"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="code", type="string", example="SITE001", maxLength=50),
+     *             @OA\Property(property="name", type="string", example="Col du Poutou", maxLength=255),
+     *             @OA\Property(property="description", type="string", nullable=true),
+     *             @OA\Property(property="location", type="string", example="Luchon, France", maxLength=255),
+     *             @OA\Property(property="latitude", type="number", format="float", example=42.7896, minimum=-90, maximum=90),
+     *             @OA\Property(property="longitude", type="number", format="float", example=0.5937, minimum=-180, maximum=180),
+     *             @OA\Property(property="altitude", type="integer", example=1800, minimum=0),
+     *             @OA\Property(property="difficulty_level", type="string", enum={"beginner", "intermediate", "advanced"}, example="intermediate"),
+     *             @OA\Property(property="orientation", type="string", enum={"N", "NE", "E", "SE", "S", "SW", "W", "NW", "multi"}, nullable=true),
+     *             @OA\Property(property="wind_conditions", type="string", nullable=true, maxLength=500),
+     *             @OA\Property(property="landing_zone_info", type="string", nullable=true, maxLength=1000),
+     *             @OA\Property(property="is_active", type="boolean", example=true),
+     *             @OA\Property(property="seasonal_availability", type="array", nullable=true, @OA\Items(type="string"))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Site mis à jour avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Site mis à jour avec succès"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Site non trouvé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function update(Request $request, int $id): JsonResponse
     {
@@ -133,7 +251,26 @@ class SiteController extends Controller
     }
 
     /**
-     * Supprimer un site (admin)
+     * @OA\Delete(
+     *     path="/api/v1/admin/sites/{id}",
+     *     summary="Supprimer un site (Admin)",
+     *     description="Supprime un site (désactive si utilisé dans des réservations)",
+     *     operationId="deleteSite",
+     *     tags={"Sites"},
+     *     security={{"sanctum": {}}, {"organization": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Site supprimé ou désactivé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Site supprimé avec succès")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Site non trouvé"),
+     *     @OA\Response(response=403, description="Accès refusé"),
+     *     @OA\Response(response=429, description="Rate limit atteint")
+     * )
      */
     public function destroy(int $id): JsonResponse
     {

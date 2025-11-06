@@ -30,8 +30,14 @@ use App\Http\Controllers\Webhook\StripeWebhookController;
 
 Route::prefix('v1')->group(function () {
     
+    // ==================== RATE LIMITING ====================
+    // Routes publiques : 60 req/min par tenant
+    // Routes authentifiées : 120 req/min par tenant
+    // Routes admin : 300 req/min par tenant
+    
     // ==================== AUTHENTIFICATION ====================
-    Route::prefix('auth')->group(function () {
+    // Rate limiting plus strict pour auth (30 req/min pour éviter brute force)
+    Route::prefix('auth')->middleware('throttle.tenant:30,1')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
@@ -39,7 +45,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== RÉSERVATIONS (PUBLIC) ====================
-    Route::prefix('reservations')->group(function () {
+    Route::prefix('reservations')->middleware('throttle.tenant:60,1')->group(function () {
         Route::post('/', [ReservationController::class, 'store']);
         Route::get('/{uuid}', [ReservationController::class, 'show']);
         Route::post('/{uuid}/add-options', [ReservationController::class, 'addOptions']);
@@ -49,7 +55,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== RÉSERVATIONS (CLIENT AUTHENTIFIÉ) ====================
-    Route::prefix('my')->middleware(['auth:sanctum', 'role:client'])->group(function () {
+    Route::prefix('my')->middleware(['auth:sanctum', 'role:client', 'throttle.tenant:120,1'])->group(function () {
         Route::get('/reservations', [ReservationController::class, 'myReservations']);
         Route::get('/reservations/{id}', [ReservationController::class, 'myReservation']);
         Route::get('/reservations/{id}/history', [ReservationController::class, 'myReservationHistory']);
@@ -57,7 +63,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== PAIEMENTS ====================
-    Route::prefix('payments')->group(function () {
+    Route::prefix('payments')->middleware('throttle.tenant:60,1')->group(function () {
         Route::post('/intent', [PaymentController::class, 'createIntent']);
         Route::post('/capture', [PaymentController::class, 'capture'])->middleware(['auth:sanctum', 'role:admin,instructor,biplaceur']); // 'biplaceur' pour rétrocompatibilité
         Route::post('/refund', [PaymentController::class, 'refund'])->middleware(['auth:sanctum', 'role:admin']);
@@ -72,14 +78,14 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== INSTRUCTORS (Générique) ====================
-    Route::prefix('instructors')->group(function () {
+    Route::prefix('instructors')->middleware('throttle.tenant:60,1')->group(function () {
         // Routes publiques (liste)
         Route::get('/', [InstructorController::class, 'index']);
         Route::get('/by-activity/{activity_type}', [InstructorController::class, 'byActivity']);
         
         // Routes instructeur authentifié
         // Note: 'biplaceur' dans le middleware pour rétrocompatibilité
-        Route::middleware(['auth:sanctum', 'role:instructor,biplaceur'])->prefix('me')->group(function () {
+        Route::middleware(['auth:sanctum', 'role:instructor,biplaceur', 'throttle.tenant:120,1'])->prefix('me')->group(function () {
             Route::get('/sessions', [InstructorController::class, 'mySessions']);
             Route::get('/sessions/today', [InstructorController::class, 'sessionsToday']);
             Route::get('/calendar', [InstructorController::class, 'calendar']);
@@ -90,7 +96,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Routes admin
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
             Route::get('/{id}', [InstructorController::class, 'show']);
             Route::get('/{id}/calendar', [InstructorController::class, 'calendar']);
             Route::post('/', [InstructorController::class, 'store']);
@@ -100,7 +106,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== ACTIVITIES (Générique) ====================
-    Route::prefix('activities')->group(function () {
+    Route::prefix('activities')->middleware('throttle.tenant:60,1')->group(function () {
         // Routes publiques
         Route::get('/', [ActivityController::class, 'index']);
         Route::get('/by-type/{type}', [ActivityController::class, 'byType']);
@@ -109,7 +115,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/{id}/availability', [ActivityController::class, 'availability']);
 
         // Routes admin
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
             Route::post('/', [ActivityController::class, 'store']);
             Route::put('/{id}', [ActivityController::class, 'update']);
             Route::delete('/{id}', [ActivityController::class, 'destroy']);
@@ -118,7 +124,7 @@ Route::prefix('v1')->group(function () {
 
     // ==================== BIPLACEURS (DEPRECATED - Alias vers Instructors) ====================
     // @deprecated - Utilisez /instructors?activity_type=paragliding à la place
-    Route::prefix('biplaceurs')->group(function () {
+    Route::prefix('biplaceurs')->middleware('throttle.tenant:60,1')->group(function () {
         // Routes publiques
         Route::get('/', [BiplaceurController::class, 'index']);
         Route::get('/{id}', [BiplaceurController::class, 'show'])->middleware(['auth:sanctum', 'role:admin']);
@@ -148,14 +154,14 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== ACTIVITY SESSIONS (Générique) ====================
-    Route::prefix('activity-sessions')->group(function () {
+    Route::prefix('activity-sessions')->middleware('throttle.tenant:60,1')->group(function () {
         // Routes publiques
         Route::get('/', [ActivitySessionController::class, 'index']);
         Route::get('/by-activity/{activity_id}', [ActivitySessionController::class, 'byActivity']);
         Route::get('/{id}', [ActivitySessionController::class, 'show']);
 
         // Routes admin
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
             Route::post('/', [ActivitySessionController::class, 'store']);
             Route::put('/{id}', [ActivitySessionController::class, 'update']);
             Route::delete('/{id}', [ActivitySessionController::class, 'destroy']);
@@ -163,7 +169,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== CLIENTS ====================
-    Route::prefix('clients')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('clients')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [ClientController::class, 'index']);
         Route::get('/{id}', [ClientController::class, 'show']);
         Route::post('/', [ClientController::class, 'store']);
@@ -172,9 +178,9 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== OPTIONS ====================
-    Route::prefix('options')->group(function () {
+    Route::prefix('options')->middleware('throttle.tenant:60,1')->group(function () {
         Route::get('/', [OptionController::class, 'index']); // Public
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
             Route::post('/', [OptionController::class, 'store']);
             Route::put('/{id}', [OptionController::class, 'update']);
             Route::delete('/{id}', [OptionController::class, 'destroy']);
@@ -182,7 +188,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== COUPONS ====================
-    Route::prefix('coupons')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('coupons')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [CouponController::class, 'index']);
         Route::post('/', [CouponController::class, 'store']);
         Route::put('/{id}', [CouponController::class, 'update']);
@@ -190,9 +196,9 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== BONS CADEAUX ====================
-    Route::prefix('giftcards')->group(function () {
+    Route::prefix('giftcards')->middleware('throttle.tenant:60,1')->group(function () {
         Route::post('/validate', [GiftCardController::class, 'validate']);
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
             Route::get('/', [GiftCardController::class, 'index']);
             Route::post('/', [GiftCardController::class, 'store']);
             Route::put('/{id}', [GiftCardController::class, 'update']);
@@ -200,15 +206,15 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== SIGNATURES ====================
-    Route::prefix('signatures')->group(function () {
+    Route::prefix('signatures')->middleware('throttle.tenant:60,1')->group(function () {
         Route::post('/{reservation_id}', [SignatureController::class, 'store']);
     });
 
     // ==================== SITES ====================
-    Route::prefix('sites')->group(function () {
+    Route::prefix('sites')->middleware('throttle.tenant:60,1')->group(function () {
         Route::get('/', [SiteController::class, 'index']); // Public
         Route::get('/{id}', [SiteController::class, 'show']); // Public
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+        Route::middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
             Route::post('/', [SiteController::class, 'store']);
             Route::put('/{id}', [SiteController::class, 'update']);
             Route::delete('/{id}', [SiteController::class, 'destroy']);
@@ -216,7 +222,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== RESSOURCES (ADMIN) ====================
-    Route::prefix('admin/resources')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/resources')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [ResourceController::class, 'index']);
         Route::get('/vehicles', [ResourceController::class, 'vehicles']);
         Route::get('/tandem-gliders', [ResourceController::class, 'tandemGliders']);
@@ -228,7 +234,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== DASHBOARD (ADMIN) ====================
-    Route::prefix('admin/dashboard')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/dashboard')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [DashboardController::class, 'index']); // Route principale
         Route::get('/summary', [DashboardController::class, 'summary']);
         Route::get('/stats', [DashboardController::class, 'stats']); // Alias pour summary
@@ -239,7 +245,7 @@ Route::prefix('v1')->group(function () {
     });
     
     // ==================== ADMIN - INSTRUCTORS (Générique) ====================
-    Route::prefix('admin/instructors')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/instructors')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [InstructorController::class, 'index']);
         Route::get('/{id}', [InstructorController::class, 'show']);
         Route::get('/{id}/calendar', [InstructorController::class, 'calendar']);
@@ -249,7 +255,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== ADMIN - RÉSERVATIONS ====================
-    Route::prefix('admin/reservations')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/reservations')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [ReservationAdminController::class, 'index']);
         Route::get('/{id}', [ReservationAdminController::class, 'show']);
         Route::get('/{id}/history', [ReservationAdminController::class, 'history']);
@@ -263,7 +269,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== NOTIFICATIONS ====================
-    Route::prefix('notifications')->middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('notifications')->middleware(['auth:sanctum', 'throttle.tenant:120,1'])->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
@@ -272,21 +278,21 @@ Route::prefix('v1')->group(function () {
     });
 
     // ==================== ADMIN - RAPPORTS ====================
-    Route::prefix('admin/reports')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/reports')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [ReportController::class, 'index']);
         Route::get('/daily', [ReportController::class, 'daily']);
         Route::get('/monthly', [ReportController::class, 'monthly']);
     });
 
     // ==================== STRIPE CONNECT ====================
-    Route::prefix('admin/stripe/connect')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/stripe/connect')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::post('/account', [StripeConnectController::class, 'createAccount']);
         Route::get('/status', [StripeConnectController::class, 'getAccountStatus']);
         Route::get('/login-link', [StripeConnectController::class, 'getLoginLink']);
     });
 
     // ==================== SUBSCRIPTIONS ====================
-    Route::prefix('admin/subscriptions')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::prefix('admin/subscriptions')->middleware(['auth:sanctum', 'role:admin', 'throttle.tenant:300,1'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'create']);
         Route::get('/current', [\App\Http\Controllers\Api\Admin\SubscriptionController::class, 'current']);

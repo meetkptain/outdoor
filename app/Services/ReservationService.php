@@ -10,6 +10,7 @@ use App\Models\Option;
 use App\Models\Coupon;
 use App\Models\GiftCard;
 use App\Modules\ModuleRegistry;
+use App\Modules\ModuleHook;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -42,6 +43,16 @@ class ReservationService
         try {
             // Récupérer l'activité
             $activity = Activity::findOrFail($data['activity_id']);
+            
+            // Récupérer le module correspondant
+            $module = $this->moduleRegistry->get($activity->activity_type);
+            
+            // Hook: Avant création de réservation
+            if ($module) {
+                $data = $module->beforeReservationCreate($data);
+                // Déclencher aussi le hook global si nécessaire
+                $this->moduleRegistry->triggerHook(ModuleHook::BEFORE_RESERVATION_CREATE, $activity->activity_type, $data);
+            }
             
             // Valider les contraintes depuis l'activité
             $this->validateConstraints($activity, $data);
@@ -148,6 +159,13 @@ class ReservationService
             $reservation->addHistory('created', null, $reservation->toArray());
 
             DB::commit();
+
+            // Hook: Après création de réservation
+            if ($module) {
+                $module->afterReservationCreate($reservation);
+                // Déclencher aussi le hook global si nécessaire
+                $this->moduleRegistry->triggerHook(ModuleHook::AFTER_RESERVATION_CREATE, $activity->activity_type, $reservation);
+            }
 
             // Dispatch event (notifications gérées par listeners)
             \App\Events\ReservationCreated::dispatch($reservation);
@@ -555,12 +573,27 @@ class ReservationService
 
             // Créer/mettre à jour les ActivitySession avec l'instructeur
             $reservation->load('activitySessions');
+            $module = $this->moduleRegistry->get($activity->activity_type);
+            
             foreach ($reservation->activitySessions as $session) {
-                $session->update([
+                // Hook: Avant planification de session
+                $sessionData = [
                     'instructor_id' => $instructorId,
                     'scheduled_at' => $scheduledAt,
                     'site_id' => $data['site_id'] ?? null,
-                ]);
+                ];
+                
+                if ($module) {
+                    $sessionData = $module->beforeSessionSchedule($sessionData);
+                    $this->moduleRegistry->triggerHook(ModuleHook::BEFORE_SESSION_SCHEDULE, $activity->activity_type, $sessionData);
+                }
+                
+                $session->update($sessionData);
+                
+                // Hook: Après planification de session
+                if ($module) {
+                    $this->moduleRegistry->triggerHook(ModuleHook::AFTER_SESSION_SCHEDULE, $activity->activity_type, $session->fresh());
+                }
             }
 
             $newValues = [
