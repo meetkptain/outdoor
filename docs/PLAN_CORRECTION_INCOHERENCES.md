@@ -1,3 +1,45 @@
+# Plan de Correction des Incohérences (SaaS Multi-niche)
+
+## 1. Fondations Branding & Configuration
+- **Modèle** : ajouter un champ `branding` (JSON) sur `organizations` avec nom public, slogan, contacts, couleurs et emoji optionnel.
+- **Service** : créer `BrandingResolver` pour récupérer le branding du tenant courant avec fallback global.
+- **Intégration** : exposer le resolver aux vues Blade, aux notifications, et aux services Stripe.
+- **Tests** : couvrir le fallback par défaut et un tenant avec branding personnalisé.
+
+## 2. Externalisation des contenus par activité
+- **Modules** : chaque module (`app/Modules/{Activity}`) dispose d’un dossier `resources` (emails, checklist, texte marketing).
+- **Chargement** : ajouter un loader `ModuleViewFinder` qui tente `modules::{activity}::emails.xxx` puis se replie sur une version générique.
+- **Copywriting** : autoriser un manifest (`copywriting.yaml`) par module avec les libellés (“vol”, “session”, “cours”).
+
+## 3. Rétrocompatibilité contrôlée
+- **Alias** : table `activity_aliases` (`organization_id`, `legacy_key`, `activity_id`). Conversion automatique des anciennes clés (`flight_type`).
+- **Routes** : conserver les endpoints hérités (`/flights`, `/biplaceurs`) comme wrappers génériques avec header `X-Legacy-Endpoint` et log d’usage.
+- **Sunset** : planifier la désactivation des alias tenant par tenant (feature flag `legacy_aliases`).
+
+## 4. Harmonisation du domaine & données
+- **Modèles** : supprimer l’usage direct de `flight_type` dans les vues/services et utiliser `activity->display_name`.
+- **Migrations** : conditionner la création d’activités parapente à l’activation du module (`ModuleRegistry::isEnabled`).
+- **Seeders** : fournir un seeder générique `DefaultActivitySeeder` paramétrable (`activity_type`) pour l’onboarding.
+
+## 5. Paiement & intégrations externes
+- **Stripe Checkout** : générer `product_data.name` via `BrandingResolver` + libellé activité.
+- **Metadata** : inclure `tenant_id`, `activity_type` sur les intents pour la traçabilité.
+- **Tests** : vérifications automatiques sur deux activités (parapente/surf) pour les libellés Stripe.
+
+## 6. Documentation & Communication
+- **OpenAPI** : transformer `docs/openapi.yaml` en description générique et générer des variantes par activité (`artisan docs:generate --activity=paragliding`).
+- **Guides** : remplacer les noms codés en dur (`parapente_prod`) par placeholders (`{{APP_NAME}}`).
+- **Customer comms** : produire un guide “Migration depuis Parapente” listant alias, nouvelles routes et exemples d’emails personnalisés.
+
+## 7. Observabilité & Quality Gates
+- **CI** : ajout d’un job qui échoue s’il trouve “parapente” hors dossiers de module.
+- **Healthcheck** : endpoint `/health/branding` confirmant la présence du branding pour chaque tenant actif.
+- **Dashboard QA** : suivre le nombre de templates migrés et les usages restants des alias.
+
+## 8. Gouvernance & Déploiement progressif
+- **Roadmap** : dérouler en trois vagues (Fondations → Contenus → Dépréciations).
+- **Feature flags** : `branding_v2`, `module_templates`, `legacy_aliases` pour un rollout progressif et réversible.
+- **Suivi** : revue bimensuelle de la configuration tenant et des nouveautés modules pour garantir la cohérence multi-niche.
 # 📋 Plan d'Action - Correction des Incohérences Généralisation
 
 **Date:** 2025-11-05  
