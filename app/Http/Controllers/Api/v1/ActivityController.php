@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Organization;
+use App\Helpers\CacheHelper;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -13,6 +15,7 @@ use Illuminate\Http\JsonResponse;
  */
 class ActivityController extends Controller
 {
+    use PaginatesApiResponse;
     /**
      * @OA\Get(
      *     path="/api/v1/activities",
@@ -74,15 +77,30 @@ class ActivityController extends Controller
             ], 404);
         }
 
-        $query = Activity::withoutGlobalScopes()
-            ->where('organization_id', $organization->id)
-            ->where('is_active', true);
-
+        // Préparer les filtres pour la clé de cache
+        $filters = [];
         if ($activityType) {
-            $query->ofType($activityType);
+            $filters['activity_type'] = $activityType;
         }
 
-        $activities = $query->get();
+        // Récupérer avec cache (TTL 5 minutes)
+        $cacheKey = CacheHelper::activitiesListKey($organization->id, $filters);
+        $activities = CacheHelper::remember(
+            $organization->id,
+            $cacheKey,
+            300, // 5 minutes
+            function () use ($organization, $activityType) {
+                $query = Activity::withoutGlobalScopes()
+                    ->where('organization_id', $organization->id)
+                    ->where('is_active', true);
+
+                if ($activityType) {
+                    $query->ofType($activityType);
+                }
+
+                return $query->get();
+            }
+        );
 
         return response()->json([
             'success' => true,

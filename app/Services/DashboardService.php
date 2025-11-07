@@ -6,15 +6,36 @@ use App\Models\Reservation;
 use App\Models\Payment;
 use App\Models\Instructor;
 use App\Models\ActivitySession;
+use App\Helpers\CacheHelper;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 
 class DashboardService
 {
     /**
-     * Récupérer le résumé global
+     * Récupérer le résumé global (avec cache)
      */
-    public function getSummary(string $period = 'month'): array
+    public function getSummary(string $period = 'month', ?int $organizationId = null): array
+    {
+        // Si pas d'organisation, on ne peut pas cacher par tenant
+        if (!$organizationId) {
+            return $this->getSummaryWithoutCache($period);
+        }
+
+        $cacheKey = CacheHelper::statsKey($organizationId, 'summary', ['period' => $period]);
+        
+        return CacheHelper::remember(
+            $organizationId,
+            $cacheKey,
+            300, // 5 minutes
+            fn() => $this->getSummaryWithoutCache($period)
+        );
+    }
+
+    /**
+     * Récupérer le résumé global sans cache
+     */
+    protected function getSummaryWithoutCache(string $period): array
     {
         $startDate = $this->getStartDate($period);
         $endDate = now();
@@ -45,9 +66,28 @@ class DashboardService
     }
 
     /**
-     * Récupérer les statistiques de réservations par statut
+     * Récupérer les statistiques de réservations par statut (avec cache)
      */
-    public function getReservationStats(string $period = 'month'): array
+    public function getReservationStats(string $period = 'month', ?int $organizationId = null): array
+    {
+        if (!$organizationId) {
+            return $this->getReservationStatsWithoutCache($period);
+        }
+
+        $cacheKey = CacheHelper::statsKey($organizationId, 'reservation_stats', ['period' => $period]);
+        
+        return CacheHelper::remember(
+            $organizationId,
+            $cacheKey,
+            300, // 5 minutes
+            fn() => $this->getReservationStatsWithoutCache($period)
+        );
+    }
+
+    /**
+     * Récupérer les statistiques de réservations sans cache
+     */
+    protected function getReservationStatsWithoutCache(string $period): array
     {
         $startDate = $this->getStartDate($period);
         $endDate = now();

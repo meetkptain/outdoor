@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use App\Models\GiftCard;
 use App\Services\ClientService;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
  */
 class GiftCardController extends Controller
 {
+    use PaginatesApiResponse;
+
     protected ClientService $clientService;
 
     public function __construct(ClientService $clientService)
@@ -125,13 +128,13 @@ class GiftCardController extends Controller
             $query->where('code', 'like', "%{$search}%");
         }
 
-        $giftCards = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+        $giftCards = $this->paginateQuery(
+            $query->orderBy('created_at', 'desc'),
+            $request,
+            15
+        );
 
-        return response()->json([
-            'success' => true,
-            'data' => $giftCards,
-        ]);
+        return $this->paginatedResponse($giftCards);
     }
 
     /**

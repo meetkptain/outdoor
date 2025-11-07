@@ -2,6 +2,9 @@
 
 namespace App\Modules;
 
+use App\Helpers\CacheHelper;
+use Illuminate\Support\Facades\Cache;
+
 class ModuleRegistry
 {
     protected array $modules = [];
@@ -16,14 +19,36 @@ class ModuleRegistry
         
         // Enregistrer les événements du module
         $module->registerEvents();
+        
+        // Invalider le cache du module (si disponible)
+        try {
+            CacheHelper::invalidateModule($module->getActivityType());
+        } catch (\Exception $e) {
+            // Ignorer les erreurs de cache si non disponible
+        }
     }
 
     /**
-     * Récupérer un module par son type
+     * Récupérer un module par son type (avec cache)
      */
     public function get(string $type): ?ModuleInterface
     {
+        // Les modules sont chargés au démarrage, pas besoin de cache ici
+        // Mais on peut mettre en cache la configuration du module
         return $this->modules[$type] ?? null;
+    }
+
+    /**
+     * Récupérer la configuration d'un module avec cache
+     */
+    public function getCachedConfig(string $type): ?array
+    {
+        $cacheKey = CacheHelper::moduleConfigKey($type);
+        
+        return Cache::remember($cacheKey, 3600, function () use ($type) {
+            $module = $this->get($type);
+            return $module ? $module->getConfig() : null;
+        });
     }
 
     /**

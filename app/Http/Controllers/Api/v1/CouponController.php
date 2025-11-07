@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
  */
 class CouponController extends Controller
 {
+    use PaginatesApiResponse;
     /**
      * @OA\Get(
      *     path="/api/v1/admin/coupons",
@@ -41,13 +43,13 @@ class CouponController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        $coupons = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+        $coupons = $this->paginateQuery(
+            $query->orderBy('created_at', 'desc'),
+            $request,
+            15
+        );
 
-        return response()->json([
-            'success' => true,
-            'data' => $coupons,
-        ]);
+        return $this->paginatedResponse($coupons);
     }
 
     /**

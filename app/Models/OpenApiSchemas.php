@@ -104,6 +104,30 @@ namespace App\Models;
  *     @OA\Property(property="data", type="object"),
  *     @OA\Property(property="message", type="string", nullable=true)
  * )
+ *
+ * @OA\Schema(
+ *     schema="Pagination",
+ *     type="object",
+ *     title="Pagination",
+ *     description="Informations de pagination standardisées",
+ *     @OA\Property(property="current_page", type="integer", example=1, description="Page actuelle"),
+ *     @OA\Property(property="per_page", type="integer", example=15, description="Nombre d'éléments par page"),
+ *     @OA\Property(property="total", type="integer", example=100, description="Nombre total d'éléments"),
+ *     @OA\Property(property="last_page", type="integer", example=7, description="Dernière page"),
+ *     @OA\Property(property="from", type="integer", nullable=true, example=1, description="Index du premier élément de la page"),
+ *     @OA\Property(property="to", type="integer", nullable=true, example=15, description="Index du dernier élément de la page"),
+ *     @OA\Property(property="has_more_pages", type="boolean", example=true, description="Indique s'il y a d'autres pages")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="PaginatedResponse",
+ *     type="object",
+ *     title="Paginated Response",
+ *     description="Réponse paginée standardisée",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="data", type="array", @OA\Items(type="object"), description="Données de la page"),
+ *     @OA\Property(property="pagination", ref="#/components/schemas/Pagination")
+ * )
  */
 class OpenApiSchemas
 {

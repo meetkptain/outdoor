@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ReservationService;
 use App\Services\PaymentService;
 use App\Models\Reservation;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\Option;
@@ -15,6 +16,8 @@ use App\Models\Option;
  */
 class ReservationController extends Controller
 {
+    use PaginatesApiResponse;
+
     public function __construct(
         protected ReservationService $reservationService,
         protected PaymentService $paymentService
@@ -276,13 +279,13 @@ class ReservationController extends Controller
             ->orWhere('client_id', $user->client?->id)
             ->with(['instructor', 'activity', 'site', 'options', 'payments']);
 
-        $reservations = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+        $reservations = $this->paginateQuery(
+            $query->orderBy('created_at', 'desc'),
+            $request,
+            15
+        );
 
-        return response()->json([
-            'success' => true,
-            'data' => $reservations,
-        ]);
+        return $this->paginatedResponse($reservations);
     }
 
     /**

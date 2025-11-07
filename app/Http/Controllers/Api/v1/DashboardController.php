@@ -73,8 +73,9 @@ class DashboardController extends Controller
     public function stats(Request $request)
     {
         $period = $request->get('period', 'month');
+        $organizationId = $this->getOrganizationId($request);
 
-        $stats = $this->dashboardService->getReservationStats($period);
+        $stats = $this->dashboardService->getReservationStats($period, $organizationId);
 
         return response()->json([
             'success' => true,
@@ -112,13 +113,46 @@ class DashboardController extends Controller
     public function summary(Request $request)
     {
         $period = $request->get('period', 'month');
+        $organizationId = $this->getOrganizationId($request);
 
-        $summary = $this->dashboardService->getSummary($period);
+        $summary = $this->dashboardService->getSummary($period, $organizationId);
 
         return response()->json([
             'success' => true,
             'data' => $summary,
         ]);
+    }
+
+    /**
+     * Récupérer l'ID de l'organisation depuis différentes sources
+     */
+    protected function getOrganizationId(Request $request): ?int
+    {
+        // 1. Header HTTP (priorité)
+        if ($request->hasHeader('X-Organization-ID')) {
+            return (int) $request->header('X-Organization-ID');
+        }
+
+        // 2. Session
+        if (session()->has('organization_id')) {
+            return (int) session('organization_id');
+        }
+
+        // 3. User authentifié
+        if ($request->user()) {
+            $orgId = $request->user()->getCurrentOrganizationId();
+            if ($orgId) {
+                return (int) $orgId;
+            }
+        }
+
+        // 4. Config (fallback)
+        if (config('app.current_organization')) {
+            $org = config('app.current_organization');
+            return is_object($org) ? $org->id : (int) $org;
+        }
+
+        return null;
     }
 
     /**

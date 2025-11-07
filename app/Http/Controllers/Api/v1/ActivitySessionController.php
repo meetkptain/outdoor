@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
  */
 class ActivitySessionController extends Controller
 {
+    use PaginatesApiResponse;
     /**
      * @OA\Get(
      *     path="/api/v1/activity-sessions",
@@ -67,12 +68,13 @@ class ActivitySessionController extends Controller
             $query->where('scheduled_at', '<=', $endDate);
         }
 
-        $sessions = $query->orderBy('scheduled_at', 'desc')->get();
+        $sessions = $this->paginateQuery(
+            $query->orderBy('scheduled_at', 'desc'),
+            $request,
+            15
+        );
 
-        return response()->json([
-            'success' => true,
-            'data' => $sessions,
-        ]);
+        return $this->paginatedResponse($sessions);
     }
 
     /**

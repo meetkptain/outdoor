@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Site;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -12,6 +13,7 @@ use Illuminate\Http\JsonResponse;
  */
 class SiteController extends Controller
 {
+    use PaginatesApiResponse;
     /**
      * @OA\Get(
      *     path="/api/v1/sites",
@@ -61,12 +63,9 @@ class SiteController extends Controller
             });
         }
 
-        $sites = $query->orderBy('name')->paginate($request->get('per_page', 15));
+        $sites = $this->paginateQuery($query->orderBy('name'), $request, 15);
 
-        return response()->json([
-            'success' => true,
-            'data' => $sites,
-        ]);
+        return $this->paginatedResponse($sites);
     }
 
     /**

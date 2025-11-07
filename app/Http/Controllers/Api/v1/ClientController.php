@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Services\ClientService;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
  */
 class ClientController extends Controller
 {
+    use PaginatesApiResponse;
+
     protected ClientService $clientService;
 
     public function __construct(ClientService $clientService)
@@ -59,12 +62,9 @@ class ClientController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        $clients = $query->paginate($request->get('per_page', 15));
+        $clients = $this->paginateQuery($query, $request, 15);
 
-        return response()->json([
-            'success' => true,
-            'data' => $clients,
-        ]);
+        return $this->paginatedResponse($clients);
     }
 
     /**

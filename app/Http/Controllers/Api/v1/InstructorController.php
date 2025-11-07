@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Instructor;
 use App\Models\Organization;
 use App\Models\ActivitySession;
+use App\Helpers\CacheHelper;
+use App\Traits\PaginatesApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -14,6 +16,7 @@ use Illuminate\Http\JsonResponse;
  */
 class InstructorController extends Controller
 {
+    use PaginatesApiResponse;
     /**
      * @OA\Get(
      *     path="/api/v1/instructors",
@@ -44,27 +47,84 @@ class InstructorController extends Controller
     {
         $activityType = $request->query('activity_type');
         
-        $query = Instructor::with('user')
-            ->where('is_active', true);
-
-        if ($activityType) {
-            $query->forActivityType($activityType);
+        // Récupérer l'organisation depuis le contexte
+        $organizationId = $this->getOrganizationId($request);
+        
+        if (!$organizationId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organization not found',
+            ], 404);
         }
 
-        $instructors = $query->get()->map(function ($instructor) {
-            return [
-                'id' => $instructor->id,
-                'name' => $instructor->user->name ?? 'N/A',
-                'activity_types' => $instructor->activity_types,
-                'experience_years' => $instructor->experience_years,
-                'license_number' => $instructor->license_number,
-            ];
-        });
+        // Préparer les filtres pour la clé de cache
+        $filters = [];
+        if ($activityType) {
+            $filters['activity_type'] = $activityType;
+        }
+
+        // Récupérer avec cache (TTL 5 minutes)
+        $cacheKey = CacheHelper::instructorsListKey($organizationId, $filters);
+        $instructors = CacheHelper::remember(
+            $organizationId,
+            $cacheKey,
+            300, // 5 minutes
+            function () use ($activityType) {
+                $query = Instructor::with('user')
+                    ->where('is_active', true);
+
+                if ($activityType) {
+                    $query->forActivityType($activityType);
+                }
+
+                return $query->get()->map(function ($instructor) {
+                    return [
+                        'id' => $instructor->id,
+                        'name' => $instructor->user->name ?? 'N/A',
+                        'activity_types' => $instructor->activity_types,
+                        'experience_years' => $instructor->experience_years,
+                        'license_number' => $instructor->license_number,
+                    ];
+                });
+            }
+        );
 
         return response()->json([
             'success' => true,
             'data' => $instructors,
         ]);
+    }
+
+    /**
+     * Récupérer l'ID de l'organisation depuis différentes sources
+     */
+    protected function getOrganizationId(Request $request): ?int
+    {
+        // 1. Header HTTP (priorité)
+        if ($request->hasHeader('X-Organization-ID')) {
+            return (int) $request->header('X-Organization-ID');
+        }
+
+        // 2. Session
+        if (session()->has('organization_id')) {
+            return (int) session('organization_id');
+        }
+
+        // 3. User authentifié
+        if ($request->user()) {
+            $orgId = $request->user()->getCurrentOrganizationId();
+            if ($orgId) {
+                return (int) $orgId;
+            }
+        }
+
+        // 4. Config (fallback)
+        if (config('app.current_organization')) {
+            $org = config('app.current_organization');
+            return is_object($org) ? $org->id : (int) $org;
+        }
+
+        return null;
     }
 
     /**

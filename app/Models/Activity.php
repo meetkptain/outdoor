@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\GlobalTenantScope;
+use App\Helpers\CacheHelper;
 
 class Activity extends Model
 {
@@ -70,5 +71,62 @@ class Activity extends Model
     public function hasConstraint(string $key): bool
     {
         return isset($this->constraints_config[$key]);
+    }
+
+    /**
+     * Récupérer la configuration de contraintes avec cache
+     * 
+     * @return array
+     */
+    public function getCachedConstraintsConfig(): array
+    {
+        $cacheKey = CacheHelper::activityConfigKey($this->id) . ':constraints';
+        
+        return CacheHelper::remember(
+            $this->organization_id,
+            $cacheKey,
+            3600, // 1 heure
+            fn() => $this->constraints_config ?? []
+        );
+    }
+
+    /**
+     * Récupérer la configuration de prix avec cache
+     * 
+     * @return array
+     */
+    public function getCachedPricingConfig(): array
+    {
+        $cacheKey = CacheHelper::activityConfigKey($this->id) . ':pricing';
+        
+        return CacheHelper::remember(
+            $this->organization_id,
+            $cacheKey,
+            3600, // 1 heure
+            fn() => $this->pricing_config ?? []
+        );
+    }
+
+    /**
+     * Boot method pour les événements du modèle
+     */
+    protected static function booted(): void
+    {
+        // Invalider le cache lors de la mise à jour
+        static::updated(function ($activity) {
+            CacheHelper::invalidateActivity($activity->organization_id, $activity->id);
+            CacheHelper::invalidateActivitiesList($activity->organization_id);
+        });
+
+        // Invalider le cache lors de la création
+        static::created(function ($activity) {
+            CacheHelper::invalidateActivitiesList($activity->organization_id);
+        });
+
+        // Invalider le cache lors de la suppression
+        static::deleted(function ($activity) {
+            CacheHelper::invalidateActivity($activity->organization_id, $activity->id);
+            CacheHelper::invalidateActivitiesList($activity->organization_id);
+        });
     }
 }
