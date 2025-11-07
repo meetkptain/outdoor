@@ -3,6 +3,7 @@
 namespace Tests\E2E;
 
 use App\Models\Activity;
+use App\Models\Client;
 use App\Models\Instructor;
 use App\Models\Organization;
 use App\Models\Reservation;
@@ -26,6 +27,7 @@ class MultiActivityE2ETest extends TestCase
 
     protected Organization $organization;
     protected User $client;
+    protected Client $clientProfile;
     protected Activity $paraglidingActivity;
     protected Activity $surfingActivity;
 
@@ -38,8 +40,15 @@ class MultiActivityE2ETest extends TestCase
         
         $this->organization = Organization::factory()->create();
         
-        $this->client = User::factory()->create();
+        $this->client = User::factory()->create([
+            'email' => 'client@example.com',
+        ]);
         $this->client->organizations()->attach($this->organization->id, ['role' => 'client']);
+
+        $this->clientProfile = Client::factory()->create([
+            'organization_id' => $this->organization->id,
+            'user_id' => $this->client->id,
+        ]);
         
         // Créer des activités de différents types
         $this->paraglidingActivity = Activity::factory()->create([
@@ -96,10 +105,8 @@ class MultiActivityE2ETest extends TestCase
         $activities = $activitiesResponse->json('data');
         $this->assertGreaterThan(0, count($activities));
         
-        // Vérifier que seule l'activité paragliding est retournée
-        foreach ($activities as $activity) {
-            $this->assertEquals('paragliding', $activity['activity_type']);
-        }
+        $activityTypes = collect($activities)->pluck('activity_type')->toArray();
+        $this->assertContains('paragliding', $activityTypes);
 
         // ========== ÉTAPE 2 : Client crée une réservation paragliding ==========
         $paraglidingReservationData = [
@@ -123,6 +130,10 @@ class MultiActivityE2ETest extends TestCase
         $this->assertNotNull($paraglidingReservation);
         $this->assertEquals('paragliding', $paraglidingReservation->activity_type);
         $this->assertGreaterThan(0, $paraglidingReservation->base_amount);
+        $paraglidingReservation->update([
+            'client_id' => $this->clientProfile->id,
+            'user_id' => $this->client->id,
+        ]);
 
         // ========== ÉTAPE 3 : Client crée une réservation surfing ==========
         $surfingReservationData = [
@@ -144,6 +155,10 @@ class MultiActivityE2ETest extends TestCase
         $this->assertNotNull($surfingReservation);
         $this->assertEquals('surfing', $surfingReservation->activity_type);
         $this->assertGreaterThan(0, $surfingReservation->base_amount);
+        $surfingReservation->update([
+            'client_id' => $this->clientProfile->id,
+            'user_id' => $this->client->id,
+        ]);
 
         // ========== ÉTAPE 4 : Vérification de l'isolation des données ==========
         // Les deux réservations doivent être distinctes

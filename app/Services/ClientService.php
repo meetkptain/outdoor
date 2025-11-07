@@ -24,8 +24,21 @@ class ClientService
             'phone' => $data['phone'] ?? null,
         ]);
 
+        // Attacher l'utilisateur à l'organisation courante si disponible
+        $organization = config('app.current_organization');
+        if ($organization) {
+            $user->organizations()->attach($organization->id, [
+                'role' => 'client',
+            ]);
+
+            // Mettre à jour l'organisation courante de l'utilisateur
+            $user->load('organizations');
+            $user->setCurrentOrganization($organization);
+        }
+
         // Créer le profil client
         $client = Client::create([
+            'organization_id' => $organization?->id,
             'user_id' => $user->id,
             'phone' => $data['phone'] ?? null,
             'weight' => $data['weight'] ?? null,

@@ -275,9 +275,17 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        $query = Reservation::where('user_id', $user->id)
-            ->orWhere('client_id', $user->client?->id)
-            ->with(['instructor', 'activity', 'site', 'options', 'payments']);
+        $query = Reservation::query()->where(function ($subQuery) use ($user) {
+            $subQuery->where('user_id', $user->id);
+
+            if ($user->client) {
+                $subQuery->orWhere('client_id', $user->client->id);
+            }
+        })->with(['instructor', 'activity', 'site', 'options', 'payments']);
+
+        if ($request->filled('activity_type')) {
+            $query->where('activity_type', $request->get('activity_type'));
+        }
 
         $reservations = $this->paginateQuery(
             $query->orderBy('created_at', 'desc'),

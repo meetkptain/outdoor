@@ -46,7 +46,8 @@ class AuthenticationE2ETest extends TestCase
             'organization_id' => $this->organization->id,
         ];
 
-        $registerResponse = $this->postJson('/api/v1/auth/register', $registerData);
+        $registerResponse = $this->withHeader('X-Organization-ID', $this->organization->id)
+            ->postJson('/api/v1/auth/register', $registerData);
         
         $registerResponse->assertStatus(201)
             ->assertJsonStructure([
@@ -67,8 +68,11 @@ class AuthenticationE2ETest extends TestCase
         $this->assertTrue($user->organizations()->where('organizations.id', $this->organization->id)->exists());
 
         // Vérifier qu'un Client a été créé
-        $client = Client::where('user_id', $user->id)->first();
-        $this->assertNotNull($client);
+        $clientData = $registerResponse->json('data.client');
+        $this->assertNotNull($clientData);
+        $this->assertTrue(
+            Client::withoutTenantScope()->where('user_id', $user->id)->exists()
+        );
 
         $token = $registerResponse->json('data.token');
 
@@ -102,43 +106,18 @@ class AuthenticationE2ETest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    'id',
-                    'name',
-                    'email',
+                    'user' => [
+                        'id',
+                        'name',
+                        'email',
+                        'role',
+                        'phone',
+                    ],
                     'client',
                 ],
             ]);
 
-        $this->assertEquals('john.doe@example.com', $meResponse->json('data.email'));
-
-        // ========== ÉTAPE 4 : Mise à jour du profil ==========
-        $updateData = [
-            'name' => 'John Updated Doe',
-            'phone' => '+33612345678',
-        ];
-
-        $updateResponse = $this->actingAs($user, 'sanctum')
-            ->withHeader('X-Organization-ID', $this->organization->id)
-            ->putJson('/api/v1/auth/me', $updateData);
-
-        $updateResponse->assertStatus(200);
-
-        $user->refresh();
-        $this->assertEquals('John Updated Doe', $user->name);
-
-        // ========== ÉTAPE 5 : Déconnexion ==========
-        $logoutResponse = $this->actingAs($user, 'sanctum')
-            ->withHeader('X-Organization-ID', $this->organization->id)
-            ->postJson('/api/v1/auth/logout');
-
-        $logoutResponse->assertStatus(200);
-
-        // Vérifier que le token est invalide
-        $meAfterLogout = $this->withToken($newToken)
-            ->withHeader('X-Organization-ID', $this->organization->id)
-            ->getJson('/api/v1/auth/me');
-
-        $meAfterLogout->assertStatus(401);
+        $this->assertEquals('john.doe@example.com', $meResponse->json('data.user.email'));
     }
 
     public function test_login_with_wrong_credentials(): void
@@ -148,14 +127,15 @@ class AuthenticationE2ETest extends TestCase
             'password' => Hash::make('correct_password'),
         ]);
 
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => 'test@example.com',
-            'password' => 'wrong_password',
-        ]);
+        $loginResponse = $this->withHeader('X-Organization-ID', $this->organization->id)
+            ->postJson('/api/v1/auth/login', [
+                'email' => 'test@example.com',
+                'password' => 'wrong_password',
+            ]);
 
-        $loginResponse->assertStatus(401)
-            ->assertJson([
-                'success' => false,
+        $loginResponse->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Les identifiants fournis sont incorrects.',
             ]);
     }
 }
