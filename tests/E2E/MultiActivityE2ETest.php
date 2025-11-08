@@ -224,3 +224,18 @@ class MultiActivityE2ETest extends TestCase
     }
 }
 
+        $paraglidingInstructors->assertStatus(200);
+        
+        $surfingInstructors = $this->withHeader('X-Organization-ID', $this->organization->id)
+            ->getJson('/api/v1/instructors?activity_type=surfing');
+        $surfingInstructors->assertStatus(200);
+
+        $paraglidingIds = collect($paraglidingInstructors->json('data'))->pluck('id')->toArray();
+        $surfingIds = collect($surfingInstructors->json('data'))->pluck('id')->toArray();
+
+        $this->assertContains($instructor->id, $paraglidingIds);
+        $this->assertContains($instructor->id, $surfingIds);
+    }
+}
+
+

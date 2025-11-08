@@ -513,3 +513,7 @@ class ReservationController extends Controller
         ]);
     }
 }
+        ]);
+    }
+}
+

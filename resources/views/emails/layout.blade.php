@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Parapente Club')</title>
+    <title>@yield('title', $branding['name'] ?? 'Parapente Club')</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -76,9 +76,15 @@
     </style>
 </head>
 <body>
+    @php
+        $brandName = data_get($branding ?? [], 'name', 'Parapente Club');
+        $brandEmoji = data_get($branding ?? [], 'emoji', '🪂');
+        $supportEmail = data_get($branding ?? [], 'support.email', 'contact@parapente-club.com');
+        $signatureCompany = data_get($branding ?? [], 'signature.company', $brandName);
+    @endphp
     <div class="email-container">
         <div class="email-header">
-            <h1>🪂 Parapente Club</h1>
+            <h1>{{ trim($brandEmoji.' '.$brandName) }}</h1>
         </div>
         
         <div class="email-body">
@@ -86,10 +92,10 @@
         </div>
         
         <div class="email-footer">
-            <p><strong>Parapente Club</strong></p>
-            <p>Pour toute question, contactez-nous à <a href="mailto:contact@parapente-club.com">contact@parapente-club.com</a></p>
+            <p><strong>{{ $signatureCompany }}</strong></p>
+            <p>Pour toute question, contactez-nous à <a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a></p>
             <p style="margin-top: 15px; font-size: 11px; color: #999;">
-                © {{ date('Y') }} Parapente Club. Tous droits réservés.
+                © {{ date('Y') }} {{ $brandName }}. Tous droits réservés.
             </p>
         </div>
     </div>

@@ -30,6 +30,26 @@ class OrganizationFactory extends Factory
             'subscription_tier' => 'free',
             'subscription_status' => 'active',
             'metadata' => [],
+            'branding' => [
+                'name' => null,
+                'tagline' => null,
+                'emoji' => null,
+                'logo_url' => null,
+                'colors' => [
+                    'primary' => null,
+                    'secondary' => null,
+                    'accent' => null,
+                ],
+                'support' => [
+                    'email' => null,
+                    'phone' => null,
+                    'website' => null,
+                ],
+                'signature' => [
+                    'company' => null,
+                    'closing' => null,
+                ],
+            ],
         ];
     }
 

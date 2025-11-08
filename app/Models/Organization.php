@@ -34,12 +34,14 @@ class Organization extends Model
         'commission_rate',
         'billing_email',
         'metadata',
+        'branding',
     ];
 
     protected $casts = [
         'settings' => 'array',
         'features' => 'array',
         'metadata' => 'array',
+        'branding' => 'array',
         'stripe_onboarding_completed' => 'boolean',
         'commission_rate' => 'decimal:2',
     ];
