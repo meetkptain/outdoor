@@ -381,16 +381,17 @@ Transformer complètement le système de mono-niche (paragliding) vers multi-nic
 ## 🧪 PLAN DE TESTS
 
 ### Tests Unitaires
-- [ ] `ReservationServiceGeneralizedTest` - Test service avec différentes activités
-- [ ] `InstructorServiceTest` - Test nouveau service
-- [ ] `ActivityConstraintsTest` - Test validation contraintes
-- [ ] `ActivityPricingTest` - Test calcul prix dynamique
+- [x] `ReservationServiceGeneralizedTest` - Test service avec différentes activités
+- [x] `InstructorServiceTest` - Test nouveau service
+- [x] `ActivityConstraintsTest` - Test validation contraintes
+- [x] `ActivityPricingTest` - Test calcul prix dynamique
 
 ### Tests d'Intégration
-- [ ] `ReservationFlowTest` - Test flux complet réservation (paragliding)
-- [ ] `ReservationFlowSurfingTest` - Test flux complet réservation (surfing)
-- [ ] `InstructorAssignmentTest` - Test assignation instructeur
-- [ ] `ActivitySessionCreationTest` - Test création sessions
+- [x] `ReservationFlowTest` - Test flux complet réservation (paragliding)
+- [x] `ReservationFlowSurfingTest` - Test flux complet réservation (surfing)
+- [x] `InstructorAssignmentTest` - Test assignation instructeur
+- [x] `ActivitySessionCreationTest` - Test création sessions
+- [x] `CompleteReservationE2ETest` - Parcours E2E avec coupon et options
 
 ### Tests de Non-Régression
 - [ ] Exécuter tous les tests existants

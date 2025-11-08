@@ -123,17 +123,3 @@ class ClientService
         return $client->fresh(['user']);
     }
 }
-
-                $user->email = $data['email'];
-            }
-            if (isset($data['name'])) {
-                $user->name = $data['name'];
-            }
-            $user->save();
-        }
-
-        return $client->fresh(['user']);
-    }
-}
-
-

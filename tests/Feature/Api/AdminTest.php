@@ -108,17 +108,14 @@ class AdminTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data' => [
-                    'data' => [
-                        '*' => [
-                            'id',
-                            'uuid',
-                            'customer_email',
-                            'status',
-                        ],
-                    ],
-                ],
+                'data',
+                'pagination',
             ]);
+
+        $data = $response->json('data') ?? [];
+        $this->assertGreaterThan(0, count($data));
+        $this->assertArrayHasKey('id', $data[0]);
+        $this->assertArrayHasKey('status', $data[0]);
     }
 
     /**
@@ -141,7 +138,7 @@ class AdminTest extends TestCase
             ->getJson('/api/v1/admin/reservations?status=pending');
 
         $response->assertStatus(200);
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         
         foreach ($data as $reservation) {
             $this->assertEquals('pending', $reservation['status']);

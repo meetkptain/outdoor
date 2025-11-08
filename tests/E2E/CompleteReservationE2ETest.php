@@ -279,7 +279,3 @@ class CompleteReservationE2ETest extends TestCase
         );
     }
 }
-
-}
-
-

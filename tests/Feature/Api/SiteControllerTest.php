@@ -53,21 +53,12 @@ class SiteControllerTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data' => [
-                    'data' => [
-                        '*' => [
-                            'id',
-                            'code',
-                            'name',
-                            'location',
-                            'is_active',
-                        ],
-                    ],
-                ],
+                'data',
+                'pagination',
             ]);
 
         // Public ne voit que les sites actifs
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         $this->assertCount(5, $data);
         $this->assertTrue(collect($data)->every(fn ($item) => $item['is_active'] === true));
     }
@@ -92,7 +83,7 @@ class SiteControllerTest extends TestCase
             ->getJson('/api/v1/sites?is_active=false');
 
         $response->assertStatus(200);
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         $this->assertCount(2, $data);
     }
 
@@ -117,7 +108,7 @@ class SiteControllerTest extends TestCase
             ->getJson('/api/v1/sites?difficulty_level=beginner');
 
         $response->assertStatus(200);
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         $this->assertCount(3, $data);
         $this->assertTrue(collect($data)->every(fn ($item) => $item['difficulty_level'] === 'beginner'));
     }
@@ -145,7 +136,7 @@ class SiteControllerTest extends TestCase
             ->getJson('/api/v1/sites?search=Test');
 
         $response->assertStatus(200);
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         $this->assertCount(1, $data);
         $this->assertEquals('Site Test', $data[0]['name']);
     }

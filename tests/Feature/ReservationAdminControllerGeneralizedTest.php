@@ -83,17 +83,17 @@ class ReservationAdminControllerGeneralizedTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'sanctum')
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
             ->getJson('/api/v1/admin/reservations?activity_type=paragliding');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data' => [
-                    'data',
-                ],
+                'data',
+                'pagination',
             ]);
 
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         $this->assertGreaterThanOrEqual(1, count($data));
         $this->assertEquals('paragliding', $data[0]['activity_type']);
     }
@@ -101,6 +101,7 @@ class ReservationAdminControllerGeneralizedTest extends TestCase
     public function test_can_schedule_reservation_with_instructor_id(): void
     {
         $response = $this->actingAs($this->admin, 'sanctum')
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
             ->postJson("/api/v1/admin/reservations/{$this->reservation->id}/schedule", [
                 'scheduled_at' => now()->addDay()->format('Y-m-d'),
                 'scheduled_time' => '10:00',
@@ -120,6 +121,7 @@ class ReservationAdminControllerGeneralizedTest extends TestCase
     public function test_reservation_show_includes_activity_and_sessions(): void
     {
         $response = $this->actingAs($this->admin, 'sanctum')
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
             ->getJson("/api/v1/admin/reservations/{$this->reservation->id}");
 
         $response->assertStatus(200)
@@ -137,11 +139,12 @@ class ReservationAdminControllerGeneralizedTest extends TestCase
     {
         // Test rétrocompatibilité : flight_type devrait aussi fonctionner
         $response = $this->actingAs($this->admin, 'sanctum')
+            ->withHeaders(['X-Organization-ID' => $this->organization->id])
             ->getJson('/api/v1/admin/reservations?flight_type=paragliding');
 
         $response->assertStatus(200);
         // Vérifier que les résultats sont filtrés par activity_type
-        $data = $response->json('data.data');
+        $data = $response->json('data') ?? [];
         if (count($data) > 0) {
             $this->assertEquals('paragliding', $data[0]['activity_type']);
         }

@@ -199,6 +199,7 @@ class ReservationService
         $module = $this->moduleRegistry->get($activity->activity_type);
         $workflow = $module?->getWorkflow() ?? [];
         $validStages = $workflow['stages'] ?? ['pending', 'authorized', 'scheduled', 'completed'];
+        $validStages = array_unique(array_merge($validStages, ['scheduled', 'completed']));
 
         // Si stage non fourni, utiliser le premier stage valide
         if ($stage === null) {
@@ -483,6 +484,22 @@ class ReservationService
 
         try {
             $reservation->update(['status' => 'completed']);
+
+            $reservation->loadMissing('activitySessions', 'activity');
+            $module = $reservation->activity
+                ? $this->moduleRegistry->get($reservation->activity->activity_type)
+                : null;
+
+            foreach ($reservation->activitySessions as $session) {
+                if ($session->status !== 'completed') {
+                    $session->update(['status' => 'completed']);
+
+                    if ($module) {
+                        $module->afterSessionComplete($session->fresh());
+                        $this->moduleRegistry->triggerHook(ModuleHook::AFTER_SESSION_COMPLETE, $reservation->activity->activity_type, $session->fresh());
+                    }
+                }
+            }
 
             // Capturer le paiement
             $payment = $reservation->payments()

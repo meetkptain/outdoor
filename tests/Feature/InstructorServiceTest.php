@@ -272,10 +272,10 @@ class InstructorServiceTest extends TestCase
 
     public function test_can_check_availability(): void
     {
-        // Test disponibilité valide
+        $validDate = Carbon::now()->next(Carbon::MONDAY)->format('Y-m-d');
         $available = $this->service->isAvailable(
             $this->instructor->id,
-            today()->format('Y-m-d'),
+            $validDate,
             '10:00:00'
         );
         $this->assertTrue($available);
@@ -298,14 +298,14 @@ class InstructorServiceTest extends TestCase
             'reservation_id' => $reservation->id,
             'instructor_id' => $this->instructor->id,
             'site_id' => $this->site->id,
-            'scheduled_at' => today()->setTime(10, 0),
+            'scheduled_at' => Carbon::parse($validDate)->setTime(10, 0),
             'status' => 'scheduled',
         ]);
 
         // Test disponibilité occupée
         $notAvailable = $this->service->isAvailable(
             $this->instructor->id,
-            today()->format('Y-m-d'),
+            $validDate,
             '10:00:00'
         );
         $this->assertFalse($notAvailable);

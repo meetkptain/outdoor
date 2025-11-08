@@ -93,6 +93,7 @@ class ReservationController extends Controller
             'coupon_code' => 'nullable|string',
             'gift_card_code' => 'nullable|string',
             'special_requests' => 'nullable|string',
+            'metadata' => 'nullable|array',
             'payment_type' => 'nullable|in:deposit,authorization,both',
             'payment_method_id' => 'required|string', // Stripe PaymentMethod ID
         ]);
@@ -513,7 +514,3 @@ class ReservationController extends Controller
         ]);
     }
 }
-        ]);
-    }
-}
-
