@@ -14,6 +14,8 @@ use App\Services\VehicleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Mockery;
+use App\Services\InstructorService;
+use App\Modules\ModuleRegistry;
 
 class ReservationServiceTest extends TestCase
 {
@@ -54,13 +56,15 @@ class ReservationServiceTest extends TestCase
         $this->paymentServiceMock = Mockery::mock(PaymentService::class);
         $this->notificationServiceMock = Mockery::mock(NotificationService::class);
         $this->vehicleServiceMock = Mockery::mock(VehicleService::class);
-        $moduleRegistry = app(\App\Modules\ModuleRegistry::class);
+        $moduleRegistry = app(ModuleRegistry::class);
+        $instructorService = new InstructorService($moduleRegistry);
 
         $this->service = new ReservationService(
             $this->paymentServiceMock,
             $this->notificationServiceMock,
             $this->vehicleServiceMock,
-            $moduleRegistry
+            $moduleRegistry,
+            $instructorService
         );
     }
 
@@ -106,6 +110,8 @@ class ReservationServiceTest extends TestCase
             'discount_value' => 10,
             'is_active' => true,
             'applicable_flight_types' => null, // Accepte tous les types ou spécifiquement 'paragliding'
+            'min_purchase_amount' => 0,
+            'max_discount' => null,
         ]);
 
         $data = [

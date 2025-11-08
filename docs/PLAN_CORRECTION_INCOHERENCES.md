@@ -113,52 +113,52 @@ Transformer complètement le système de mono-niche (paragliding) vers multi-nic
 
 ---
 
-### **PHASE 2: Refactorisation ReservationService** 🔴 CRITIQUE
+### **PHASE 2: Refactorisation ReservationService** 🔴 CRITIQUE ✅ TERMINÉE
 **Durée estimée:** 1.5 jours  
 **Dépendances:** Phase 1 terminée
 
 #### 2.1. Validation des contraintes génériques
-- [ ] **Fichier:** `app/Services/ReservationService.php`
-  - [ ] Remplacer validation hardcodée (lignes 38-51) par validation depuis `Activity->constraints_config`
-  - [ ] Créer méthode `validateConstraints(Activity $activity, array $data): void`
-  - [ ] Tester avec différentes activités (paragliding, surfing, etc.)
+- [x] **Fichier:** `app/Services/ReservationService.php`
+  - [x] Remplacer validation hardcodée (lignes 38-51) par validation depuis `Activity->constraints_config`
+  - [x] Créer méthode `validateConstraints(Activity $activity, array $data): void`
+  - [x] Tester avec différentes activités (paragliding, surfing, etc.)
 
 #### 2.2. Calcul de prix générique
-- [ ] **Fichier:** `app/Services/ReservationService.php`
-  - [ ] Remplacer `calculateBaseAmount(string $flightType, ...)` par `calculateBaseAmount(Activity $activity, ...)`
-  - [ ] Utiliser `$activity->pricing_config` au lieu de prix hardcodés
-  - [ ] Gérer différents modèles de pricing (fixe, par participant, par durée, etc.)
-  - [ ] Mettre à jour `createReservation()` pour utiliser `activity_id`
+- [x] **Fichier:** `app/Services/ReservationService.php`
+  - [x] Remplacer `calculateBaseAmount(string $flightType, ...)` par `calculateBaseAmount(Activity $activity, ...)`
+  - [x] Utiliser `$activity->pricing_config` au lieu de prix hardcodés
+  - [x] Gérer différents modèles de pricing (fixe, par participant, par durée, etc.)
+  - [x] Mettre à jour `createReservation()` pour utiliser `activity_id`
 
 #### 2.3. Création de sessions génériques
-- [ ] **Fichier:** `app/Services/ReservationService.php`
-  - [ ] Remplacer création de `Flight` (lignes 133-145) par création de `ActivitySession`
-  - [ ] Stocker les données participant dans `metadata` de `ActivitySession`
-  - [ ] Créer une session par participant si nécessaire
+- [x] **Fichier:** `app/Services/ReservationService.php`
+  - [x] Remplacer création de `Flight` (lignes 133-145) par création de `ActivitySession`
+  - [x] Stocker les données participant dans `metadata` de `ActivitySession`
+  - [x] Créer une session par participant si nécessaire
 
 #### 2.4. Logique d'assignation générique
-- [ ] **Fichier:** `app/Services/ReservationService.php`
-  - [ ] Remplacer `assignResources()` (lignes 361-449)
-  - [ ] Utiliser `Instructor` au lieu de `Biplaceur`
-  - [ ] Utiliser `getSessionsToday()` au lieu de `getFlightsToday()`
-  - [ ] Vérifier limites depuis `Instructor->max_sessions_per_day`
-  - [ ] Vérifier compétences depuis `Instructor->certifications`
-  - [ ] Créer `ActivitySession` lors de l'assignation
+- [x] **Fichier:** `app/Services/ReservationService.php`
+  - [x] Remplacer `assignResources()` (lignes 361-449)
+  - [x] Utiliser `Instructor` au lieu de `Biplaceur`
+  - [x] Utiliser `getSessionsToday()` au lieu de `getFlightsToday()`
+  - [x] Vérifier limites depuis `Instructor->max_sessions_per_day`
+  - [x] Vérifier compétences depuis `Instructor->certifications`
+  - [x] Créer `ActivitySession` lors de l'assignation
 
 #### 2.5. Stages génériques
-- [ ] **Fichier:** `app/Services/ReservationService.php`
-  - [ ] Modifier `addOptions()` pour utiliser workflow de l'activité
-  - [ ] Récupérer stages depuis `ModuleRegistry->get($activityType)->getWorkflow()`
-  - [ ] Valider stages dynamiquement
+- [x] **Fichier:** `app/Services/ReservationService.php`
+  - [x] Modifier `addOptions()` pour utiliser workflow de l'activité
+  - [x] Récupérer stages depuis `ModuleRegistry->get($activityType)->getWorkflow()`
+  - [x] Valider stages dynamiquement
 
 #### 2.6. Tests
-- [ ] Créer `tests/Feature/ReservationServiceGeneralizedTest.php`
-  - Test création réservation avec activité paragliding
-  - Test création réservation avec activité surfing
-  - Test validation contraintes depuis Activity
-  - Test calcul prix depuis Activity
-  - Test assignation instructeur
-- [ ] Mettre à jour tests existants
+- [x] Créer `tests/Feature/ReservationServiceGeneralizedTest.php`
+  - [x] Test création réservation avec activité paragliding
+  - [x] Test création réservation avec activité surfing
+  - [x] Test validation contraintes depuis Activity
+  - [x] Test calcul prix depuis Activity
+  - [x] Test assignation instructeur
+- [x] Mettre à jour tests existants
 
 **Critères de succès Phase 2:**
 - ✅ ReservationService fonctionne avec n'importe quelle activité

@@ -16,11 +16,11 @@ return new class extends Migration
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
             $table->foreignId('reservation_id')->nullable()->constrained()->nullOnDelete();
-            $table->dateTime('scheduled_at');
+            $table->dateTime('scheduled_at')->nullable();
             $table->integer('duration_minutes')->nullable();
             $table->foreignId('instructor_id')->nullable()->constrained('instructors')->nullOnDelete();
             $table->foreignId('site_id')->nullable()->constrained()->nullOnDelete();
-            $table->enum('status', ['scheduled', 'completed', 'cancelled', 'rescheduled'])->default('scheduled');
+            $table->enum('status', ['pending', 'scheduled', 'completed', 'cancelled', 'rescheduled'])->default('pending');
             $table->json('metadata')->nullable(); // Données spécifiques à l'activité
             $table->timestamps();
             $table->softDeletes();

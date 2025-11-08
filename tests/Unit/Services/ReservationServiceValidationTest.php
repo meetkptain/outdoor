@@ -10,6 +10,7 @@ use App\Services\ReservationService;
 use App\Services\NotificationService;
 use App\Services\VehicleService;
 use App\Modules\ModuleRegistry;
+use App\Services\InstructorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Mockery;
@@ -47,12 +48,14 @@ class ReservationServiceValidationTest extends TestCase
         $this->notificationServiceMock = Mockery::mock(NotificationService::class);
         $this->vehicleServiceMock = Mockery::mock(VehicleService::class);
         $moduleRegistry = app(ModuleRegistry::class);
+        $instructorService = new InstructorService($moduleRegistry);
 
         $this->service = new ReservationService(
             $this->paymentServiceMock,
             $this->notificationServiceMock,
             $this->vehicleServiceMock,
-            $moduleRegistry
+            $moduleRegistry,
+            $instructorService
         );
     }
 
