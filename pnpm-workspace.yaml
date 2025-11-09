@@ -1,0 +1,8 @@
+packages:
+  - frontends/shared
+  - frontends/admin-portal
+  - frontends/surfing-app
+  - frontends/paragliding-app
+
+ignoredBuiltDependencies:
+  - esbuild
