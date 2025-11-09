@@ -20,16 +20,16 @@
 - [x] Tests : unités + E2E (Playwright) sur parcours admin.
 
 ## Phase 3 – Surfing App
-- Parcours instant booking (formulaire dynamique via constraints_config).
-- Ajout d’options before_flight, gestion équipements loués.
-- Vue planning instructeur (sessions + météo/marées).
-- Tests UI & E2E (booking complet + assignation auto).
+- [x] Parcours instant booking (formulaire dynamique via constraints_config).
+- [x] Ajout d’options before_flight, gestion équipements loués.
+- [x] Vue planning instructeur (sessions + météo/marées).
+- [x] Tests UI & E2E (booking complet + assignation auto).
 
 ## Phase 4 – Paragliding App
-- Parcours classique (réservation puis assignation).
-- Gestion navettes/poids (intégration VehicleService & options).
-- Historique sessions + upsell options.
-- Tests E2E : création -> assignation -> completion.
+- [x] Parcours classique (réservation puis assignation).
+- [x] Gestion navettes/poids (intégration VehicleService & options).
+- [x] Historique sessions + upsell options.
+- [x] Tests E2E : création -> assignation -> completion.
 
 ## Phase 5 – Consolidation & QA
 - Factorisation libs modules (copywriting, i18n, stages workflow).

@@ -1,0 +1,206 @@
+.booking-shell {
+  width: min(820px, 100%);
+}
+
+.booking-card {
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: clamp(1.75rem, 3vw, 2.5rem);
+  backdrop-filter: blur(14px);
+  display: grid;
+  gap: 1.75rem;
+}
+
+.booking-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.booking-header h2 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.booking-header p {
+  margin: 0;
+  opacity: 0.75;
+  max-width: 28rem;
+}
+
+.booking-step span {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  opacity: 0.65;
+}
+
+.booking-price {
+  text-align: right;
+}
+
+.booking-price strong {
+  font-size: 1.75rem;
+  display: block;
+}
+
+.booking-price span {
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+.booking-intro {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.booking-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.5rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.booking-cta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.booking-form {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.booking-form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.booking-form input,
+.booking-form select,
+.booking-form textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #f8fafc;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.booking-form input:focus,
+.booking-form select:focus,
+.booking-form textarea:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2);
+}
+
+.booking-participants {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+}
+
+.booking-participants h3 {
+  margin: 0 0 0.35rem;
+}
+
+.booking-participants p {
+  margin: 0 0 0.75rem;
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+.booking-participants-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.booking-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+
+.booking-options input[type='checkbox'] {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.booking-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.booking-summary {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+}
+
+.booking-summary div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.booking-summary dt {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.6;
+}
+
+.booking-summary dd {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.booking-summary-deposit {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.booking-notes {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.95rem;
+}
+
+.booking-success {
+  text-align: center;
+}
+
+.booking-success .booking-reference {
+  margin: 1rem 0 1.5rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 640px) {
+  .booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .booking-price {
+    text-align: left;
+  }
+
+  .booking-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+

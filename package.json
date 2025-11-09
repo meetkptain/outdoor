@@ -11,6 +11,11 @@
   ],
   "scripts": {
     "lint": "echo \"TODO: lint\"",
-    "test": "echo \"TODO: test\""
+    "test": "echo \"TODO: test\"",
+    "audit:lighthouse": "node scripts/run-lighthouse.mjs"
+  },
+  "devDependencies": {
+    "chrome-launcher": "^1.1.1",
+    "lighthouse": "^12.2.0"
   }
 }

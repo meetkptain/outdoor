@@ -30,7 +30,8 @@ frontends/
 - Branding & configuration tenant (UI preview du branding_resolver).
 
 ### 4.2 Surfing App
-- Parcours instant booking : lecture contraintes (equired_metadata.swimming_level).
+- Parcours instant booking : lecture contraintes (
+equired_metadata.swimming_level).
 - Planning instructeur surf (sessions modules, météo/marées).
 - Intégration equipment rental (options stage efore_flight).
 
